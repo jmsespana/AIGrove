@@ -1,3 +1,6 @@
+import 'package:aigrove/auth/landing_page.dart';
+import 'package:aigrove/auth/login_page.dart';
+import 'package:aigrove/auth/register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // Added
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -39,11 +42,17 @@ class _AIGroveAppState extends State<AIGroveApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AIgrove',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.natureTheme, // Light theme
-      darkTheme: AppTheme.natureDarkTheme, // Dark theme with green colors
-      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-      home: MainScreen(isDark: isDark, toggleTheme: toggleTheme),
+  debugShowCheckedModeBanner: false,
+  theme: AppTheme.natureTheme,
+  darkTheme: AppTheme.natureDarkTheme,
+  themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+  initialRoute: '/landing',
+  routes: {
+    '/landing': (context) => const LandingPage(),
+    '/login': (context) => const LoginPage(),
+    '/register': (context) => const RegisterPage(),
+    '/home': (context) => MainScreen(isDark: isDark, toggleTheme: toggleTheme),
+  },
     );
   }
 }
