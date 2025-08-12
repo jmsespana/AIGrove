@@ -1,0 +1,298 @@
+import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
+class AppDrawer extends StatelessWidget {
+  // Optional parameters to customize the drawer
+  final String userName;
+  final String? userEmail;
+  final String? avatarImagePath;
+  final VoidCallback? onProfileTap;
+  final VoidCallback? onHistoryTap;
+  final VoidCallback? onSettingsTap;
+  final VoidCallback? onAboutTap;
+  final VoidCallback? onLogoutTap;
+
+  const AppDrawer({
+    super.key,
+    this.userName = 'User Name',
+    this.userEmail,
+    this.avatarImagePath,
+    this.onProfileTap,
+    this.onHistoryTap,
+    this.onSettingsTap,
+    this.onAboutTap,
+    this.onLogoutTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Clickable profile header with avatar and name
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.green.shade700,
+                  Colors.green.shade800,
+                ],
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onProfileTap ?? () => _navigateToProfile(context),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+                  child: Row(
+                    children: [
+                      // Avatar with fallback options
+                      CircleAvatar(
+                        radius: 32,
+                        backgroundColor: Colors.white,
+                        backgroundImage: avatarImagePath != null 
+                            ? AssetImage(avatarImagePath!) 
+                            : null,
+                        child: avatarImagePath == null
+                            ? const Icon(
+                                Icons.person, 
+                                size: 40, 
+                                color: Colors.green,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              userName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (userEmail != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                userEmail!,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8, 
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white24,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                'View Profile',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Divider
+          const Divider(height: 1),
+
+          // List items with improved styling
+          _buildDrawerItem(
+            context,
+            icon: FontAwesomeIcons.clockRotateLeft,
+            title: 'History',
+            onTap: onHistoryTap ?? () => _navigateToHistory(context),
+          ),
+          _buildDrawerItem(
+            context,
+            icon: FontAwesomeIcons.gear,
+            title: 'Settings',
+            onTap: onSettingsTap ?? () => _navigateToSettings(context),
+          ),
+          _buildDrawerItem(
+            context,
+            icon: FontAwesomeIcons.circleInfo,
+            title: 'About',
+            onTap: onAboutTap ?? () => _navigateToAbout(context),
+          ),
+
+          const Spacer(),
+
+          // Logout button with confirmation
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onLogoutTap ?? () => _handleLogout(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 2,
+                ),
+                icon: const Icon(Icons.logout, size: 20),
+                label: const Text(
+                  'Logout',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: FaIcon(
+          icon,
+          color: Colors.green.shade700,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+        color: Colors.grey,
+      ),
+      onTap: () {
+        Navigator.pop(context); // Close drawer first
+        onTap();
+      },
+    );
+  }
+
+  // Default navigation methods (you can customize these)
+  void _navigateToProfile(BuildContext context) {
+    // Example navigation - replace with your actual profile route
+    Navigator.pushNamed(context, '/profile');
+    // Or use: Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage()));
+  }
+
+  void _navigateToHistory(BuildContext context) {
+    Navigator.pushNamed(context, '/history');
+  }
+
+  void _navigateToSettings(BuildContext context) {
+    Navigator.pushNamed(context, '/settings');
+  }
+
+  void _navigateToAbout(BuildContext context) {
+    Navigator.pushNamed(context, '/about');
+  }
+
+  void _handleLogout(BuildContext context) {
+    // Show confirmation dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                // Add your actual logout logic here
+                _performLogout(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _performLogout(BuildContext context) {
+    // Add your logout logic here
+    // For example: clear user session, navigate to login screen
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
+}
+
+// Example usage in your app:
+/*
+AppDrawer(
+  userName: 'John Doe',
+  userEmail: 'john.doe@example.com',
+  avatarImagePath: 'assets/user_avatar.png',
+  onProfileTap: () {
+    // Custom profile navigation
+  },
+  onHistoryTap: () {
+    // Custom history navigation
+  },
+  // ... other callbacks
+)
+*/
