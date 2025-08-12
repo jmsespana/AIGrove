@@ -57,7 +57,7 @@ class _RegisterPageState extends State<RegisterPage> {
         fit: StackFit.expand,
         children: [
           Image.asset(
-            'assets/register_bg.jpg',
+            'assets/landing_bg.jpg',
             fit: BoxFit.cover,
           ),
           Container(color: Colors.black.withValues(alpha: 0.5)),
