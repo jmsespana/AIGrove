@@ -1,28 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../pages/profile_page.dart'; // Add this import
+import '../services/user_service.dart'; // Import UserService
 
 class AppDrawer extends StatelessWidget {
-  // Optional parameters to customize the drawer
-  final String userName;
-  final String? userEmail;
-  final String? avatarImagePath;
-  final VoidCallback? onProfileTap;
-  final VoidCallback? onHistoryTap;
-  final VoidCallback? onSettingsTap;
-  final VoidCallback? onAboutTap;
-  final VoidCallback? onLogoutTap;
-
-  const AppDrawer({
-    super.key,
-    this.userName = 'User Name',
-    this.userEmail,
-    this.avatarImagePath,
-    this.onProfileTap,
-    this.onHistoryTap,
-    this.onSettingsTap,
-    this.onAboutTap,
-    this.onLogoutTap,
-  });
+   // ignore: prefer_const_constructors_in_immutables
+   AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -37,16 +20,13 @@ class AppDrawer extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Colors.green.shade700,
-                  Colors.green.shade800,
-                ],
+                colors: [Colors.green.shade700, Colors.green.shade800],
               ),
             ),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: onProfileTap ?? () => _navigateToProfile(context),
+                onTap: () => _navigateToProfile(context),
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
                   child: Row(
@@ -55,13 +35,13 @@ class AppDrawer extends StatelessWidget {
                       CircleAvatar(
                         radius: 32,
                         backgroundColor: Colors.white,
-                        backgroundImage: avatarImagePath != null 
-                            ? AssetImage(avatarImagePath!) 
+                        backgroundImage: UserService().avatarImage != null
+                            ? FileImage(UserService().avatarImage!)
                             : null,
-                        child: avatarImagePath == null
+                        child: UserService().avatarImage == null
                             ? const Icon(
-                                Icons.person, 
-                                size: 40, 
+                                Icons.person,
+                                size: 40,
                                 color: Colors.green,
                               )
                             : null,
@@ -73,7 +53,7 @@ class AppDrawer extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              userName,
+                              UserService().userName,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
@@ -81,10 +61,10 @@ class AppDrawer extends StatelessWidget {
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (userEmail != null) ...[
+                            if (UserService().userEmail.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(
-                                userEmail!,
+                                UserService().userEmail,
                                 style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 14,
@@ -95,7 +75,7 @@ class AppDrawer extends StatelessWidget {
                             const SizedBox(height: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8, 
+                                horizontal: 8,
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
@@ -134,19 +114,19 @@ class AppDrawer extends StatelessWidget {
             context,
             icon: FontAwesomeIcons.clockRotateLeft,
             title: 'History',
-            onTap: onHistoryTap ?? () => _navigateToHistory(context),
+            onTap: () => _navigateToHistory(context),
           ),
           _buildDrawerItem(
             context,
             icon: FontAwesomeIcons.gear,
             title: 'Settings',
-            onTap: onSettingsTap ?? () => _navigateToSettings(context),
+            onTap: () => _navigateToSettings(context),
           ),
           _buildDrawerItem(
             context,
             icon: FontAwesomeIcons.circleInfo,
             title: 'About',
-            onTap: onAboutTap ?? () => _navigateToAbout(context),
+            onTap: () => _navigateToAbout(context),
           ),
 
           const Spacer(),
@@ -157,7 +137,7 @@ class AppDrawer extends StatelessWidget {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: onLogoutTap ?? () => _handleLogout(context),
+                onPressed: () => _handleLogout(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red.shade600,
                   foregroundColor: Colors.white,
@@ -170,10 +150,7 @@ class AppDrawer extends StatelessWidget {
                 icon: const Icon(Icons.logout, size: 20),
                 label: const Text(
                   'Logout',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -196,18 +173,11 @@ class AppDrawer extends StatelessWidget {
           color: Colors.green.shade50,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: FaIcon(
-          icon,
-          color: Colors.green.shade700,
-          size: 20,
-        ),
+        child: FaIcon(icon, color: Colors.green.shade700, size: 20),
       ),
       title: Text(
         title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
       trailing: const Icon(
         Icons.arrow_forward_ios,
@@ -223,9 +193,11 @@ class AppDrawer extends StatelessWidget {
 
   // Default navigation methods (you can customize these)
   void _navigateToProfile(BuildContext context) {
-    // Example navigation - replace with your actual profile route
-    Navigator.pushNamed(context, '/profile');
-    // Or use: Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage()));
+    Navigator.pop(context); // Close the drawer first
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ProfilePage()),
+    );
   }
 
   void _navigateToHistory(BuildContext context) {
