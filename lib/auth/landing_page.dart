@@ -14,7 +14,7 @@ class LandingPage extends StatelessWidget {
             'assets/landing_bg.jpg', // your image
             fit: BoxFit.cover,
           ),
-          Container(color: Colors.black.withValues(alpha: 0.5)),
+          Container(color: const Color.fromRGBO(0, 0, 0, 0.5)),
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
