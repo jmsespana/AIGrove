@@ -1,6 +1,7 @@
 // pages/register_page.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/user_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -46,6 +47,13 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => loading = false);
 
       if (response.user != null) {
+        // Initialize user data
+        UserService().initializeUser(
+          nameController.text.trim(),
+          lastnameController.text.trim(),
+          emailController.text.trim(),
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(

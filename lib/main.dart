@@ -10,6 +10,7 @@ import 'pages/map_page.dart';
 import 'pages/challenge_page.dart';
 import 'theme/app_theme.dart';
 import 'widgets/app_drawer.dart';
+import 'services/user_service.dart'; // Import UserService
 
 const supabaseUrl = 'https://xtgzxoszyrxzbqvfdfif.supabase.co';
 const supabaseKey =
@@ -17,6 +18,8 @@ const supabaseKey =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Initialize UserService
+  UserService();
 
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
   runApp(const AIGroveApp());
@@ -42,17 +45,18 @@ class _AIGroveAppState extends State<AIGroveApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AIgrove',
-  debugShowCheckedModeBanner: false,
-  theme: AppTheme.natureTheme,
-  darkTheme: AppTheme.natureDarkTheme,
-  themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-  initialRoute: '/landing',
-  routes: {
-    '/landing': (context) => const LandingPage(),
-    '/login': (context) => const LoginPage(),
-    '/register': (context) => const RegisterPage(),
-    '/home': (context) => MainScreen(isDark: isDark, toggleTheme: toggleTheme),
-  },
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.natureTheme,
+      darkTheme: AppTheme.natureDarkTheme,
+      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+      initialRoute: '/landing',
+      routes: {
+        '/landing': (context) => const LandingPage(),
+        '/login': (context) => const LoginPage(),
+        '/register': (context) => const RegisterPage(),
+        '/home': (context) =>
+            MainScreen(isDark: isDark, toggleTheme: toggleTheme),
+      },
     );
   }
 }
@@ -104,7 +108,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
       ),
-      drawer: const AppDrawer(),
+      drawer: AppDrawer(),
       body: _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
