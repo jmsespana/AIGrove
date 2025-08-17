@@ -1,6 +1,8 @@
 // pages/login_page.dart
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
+
+import '../services/user_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,33 +18,45 @@ class _LoginPageState extends State<LoginPage> {
   bool loading = false;
   bool _passwordVisible = false; // Add this at the top with other variables
 
+  // Add form validation before login
   Future<void> _login() async {
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all fields')),
+      );
+      return;
+    }
+
     setState(() => loading = true);
     try {
-      final response = await Supabase.instance.client.auth.signInWithPassword(
-        email: emailController.text,
-        password: passwordController.text,
+      // Use UserService instead of direct Supabase call
+      final userService = Provider.of<UserService>(context, listen: false);
+      await userService.login(
+        emailController.text,
+        passwordController.text,
       );
 
       if (!mounted) return;
-
-      if (response.session != null) {
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login failed. Please check credentials.'),
-          ),
-        );
-      }
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/home',
+        (route) => false, // This removes all previous routes
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     } finally {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 
   @override

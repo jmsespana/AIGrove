@@ -1,7 +1,6 @@
 // pages/register_page.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/user_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -21,11 +20,59 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _confirmPasswordVisible = false;
   String _selectedRole = 'user';
 
+  // Add email validation
+  bool isValidEmail(String email) {
+    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
+  }
+
+  // Add password strength validation
+  bool isPasswordStrong(String password) {
+    return password.length >= 8 && // min length
+        RegExp(r'[A-Z]').hasMatch(password) && // uppercase
+        RegExp(r'[a-z]').hasMatch(password) && // lowercase
+        RegExp(r'[0-9]').hasMatch(password); // numbers
+  }
+
   Future<void> _register() async {
+    // Add validation before registration
+    if (nameController.text.isEmpty ||
+        lastnameController.text.isEmpty ||
+        emailController.text.isEmpty ||
+        passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Palihug fill-up ang tanang fields'),
+        ), // Bisaya translation
+      );
+      return;
+    }
+
+    if (!isValidEmail(emailController.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Palihug i-enter ang valid nga email'),
+        ), // Bisaya translation
+      );
+      return;
+    }
+
+    if (!isPasswordStrong(passwordController.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Ang password kinahanglan 8 ka characters ug naay uppercase, lowercase, ug numbers', // Bisaya translation
+          ),
+        ),
+      );
+      return;
+    }
+
     if (passwordController.text != confirmPasswordController.text) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Passwords do not match")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Dili parehas ang passwords'),
+        ), // Bisaya translation
+      );
       return;
     }
 
@@ -47,13 +94,20 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => loading = false);
 
       if (response.user != null) {
-        // Initialize user data
-        UserService().initializeUser(
-          nameController.text.trim(),
-          lastnameController.text.trim(),
-          emailController.text.trim(),
-        );
+        // Initialize user data by inserting a profile row into Supabase
+        try {
+          await Supabase.instance.client.from('profiles').insert({
+            'id': response.user!.id,
+            'first_name': nameController.text.trim(),
+            'last_name': lastnameController.text.trim(),
+            'email': emailController.text.trim(),
+            'role': _selectedRole,
+          });
+        } catch (e) {
+          // Ignore profile insert errors for now, registration itself succeeded
+        }
 
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
