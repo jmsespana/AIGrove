@@ -4,35 +4,46 @@ import 'package:aigrove/auth/register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // Added
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
+import 'services/user_service.dart';
+import 'services/profile_service.dart';
 import 'pages/home_page.dart';
 import 'pages/scan_page.dart';
 import 'pages/map_page.dart';
 import 'pages/challenge_page.dart';
 import 'theme/app_theme.dart';
 import 'widgets/app_drawer.dart';
-import 'services/user_service.dart'; // Import UserService
-
-const supabaseUrl = 'https://xtgzxoszyrxzbqvfdfif.supabase.co';
-const supabaseKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0Z3p4b3N6eXJ4emJxdmZkZmlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MzAwNjUsImV4cCI6MjA3MDUwNjA2NX0.H2D1E-358Dv4dRLwyzedUVp1Pdrj3nquSkCNLtsX1mQ';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Initialize UserService
-  UserService();
 
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
-  runApp(const AIGroveApp());
+  await Supabase.initialize(
+    url: 'https://xtgzxoszyrxzbqvfdfif.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0Z3p4b3N6eXJ4emJxdmZkZmlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MzAwNjUsImV4cCI6MjA3MDUwNjA2NX0.H2D1E-358Dv4dRLwyzedUVp1Pdrj3nquSkCNLtsX1mQ',
+  );
+
+  final userService = UserService();
+  await userService.initialize();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => userService),
+        ChangeNotifierProvider(create: (_) => ProfileService()),
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
-class AIGroveApp extends StatefulWidget {
-  const AIGroveApp({super.key});
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
 
   @override
-  State<AIGroveApp> createState() => _AIGroveAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
-class _AIGroveAppState extends State<AIGroveApp> {
+class _MyAppState extends State<MyApp> {
   bool isDark = false;
 
   void toggleTheme() {
