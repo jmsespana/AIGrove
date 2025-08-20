@@ -181,31 +181,48 @@ class UserService extends ChangeNotifier {
       final user = _supabase.auth.currentUser;
       if (user == null) return;
 
+      // Debug: Print user info
+      debugPrint("Updating avatar for user: ${user.id}");
+
+      // Generate SIMPLER filename - walay special characters
       final fileExt = image.path.split('.').last;
-      final fileName =
-          '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-      final filePath = 'avatars/$fileName';
+      // Simplified filename format
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final fileName = 'avatar_${user.id.substring(0, 8)}_$timestamp.$fileExt';
 
-      // Upload file
-      await _supabase.storage.from('avatars').upload(filePath, image);
+      // Debug: Print filename
+      debugPrint("Generated filename: $fileName");
 
-      // Importante: Kumuha ng PUBLIC URL sa tamang paraan
-      final imageUrl = _supabase.storage.from('avatars').getPublicUrl(filePath);
+      // Upload file to Supabase Storage
+      await _supabase.storage
+          .from('avatars')
+          .upload(
+            fileName,
+            image,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
 
-      debugPrint('Generated Avatar URL: $imageUrl');
+      // Get public URL
+      final String imageUrl = _supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
 
-      // Update profile with new avatar URL
+      // Debug: Print URL
+      debugPrint("Generated image URL: $imageUrl");
+
+      // Update profile in database
       await _supabase
           .from('profiles')
           .update({'avatar_url': imageUrl})
           .eq('id', user.id);
 
+      // Update local state
       _avatarUrl = imageUrl;
       _avatarImage = image;
 
       notifyListeners();
     } catch (e) {
-      debugPrint('Error updating avatar: $e');
+      debugPrint("Error updating avatar: $e");
       rethrow;
     }
   }
