@@ -19,6 +19,11 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
+
+    // Clear image cache at start
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAllProfileData();
     });
@@ -59,8 +64,22 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() => _isLoading = true);
         final File imageFile = File(pickedFile.path);
 
+        // Debug: Print file info
+        debugPrint("Selected image: ${pickedFile.path}");
+
+        // Upload avatar
         final userService = context.read<UserService>();
         await userService.updateAvatar(imageFile);
+
+        // Debug: Print URL after upload
+        debugPrint("Uploaded avatar URL: ${userService.avatarUrl}");
+
+        // Clear image cache to force reload
+        PaintingBinding.instance.imageCache.clear();
+        PaintingBinding.instance.imageCache.clearLiveImages();
+
+        // Force rebuild
+        setState(() {});
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -68,6 +87,7 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       }
     } catch (e) {
+      debugPrint("Error uploading image: $e");
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -77,294 +97,243 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // Edit bio
-  Future<void> _editBio() async {
-    final userService = context.read<UserService>();
-    final currentBio = userService.bio ?? '';
+  // // Edit bio
+  // Future<void> _editBio() async {
+  //   final userService = context.read<UserService>();
+  //   final currentBio = userService.bio ?? '';
 
-    final String? newBio = await showDialog<String>(
-      context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('I-edit ang Bio'),
-        content: TextField(
-          controller: _bioController..text = currentBio,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: 'I-type imong bio dinhi...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, _bioController.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
+  //   final String? newBio = await showDialog<String>(
+  //     context: context,
+  //     builder: (BuildContext dialogContext) => AlertDialog(
+  //       title: const Text('I-edit ang Bio'),
+  //       content: TextField(
+  //         controller: _bioController..text = currentBio,
+  //         maxLines: 3,
+  //         decoration: const InputDecoration(
+  //           hintText: 'I-type imong bio dinhi...',
+  //           border: OutlineInputBorder(),
+  //         ),
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(dialogContext),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(dialogContext, _bioController.text),
+  //           child: const Text('Save'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
 
-    if (!mounted) return;
+  //   if (!mounted) return;
 
-    if (newBio != null) {
-      try {
-        await userService.updateBio(newBio);
+  //   if (newBio != null) {
+  //     try {
+  //       await userService.updateBio(newBio);
 
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Bio na-update na!')));
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error sa pag-update: $e')));
-      }
-    }
-  }
+  //       if (!mounted) return;
+  //       ScaffoldMessenger.of(
+  //         context,
+  //       ).showSnackBar(const SnackBar(content: Text('Bio na-update na!')));
+  //     } catch (e) {
+  //       if (!mounted) return;
+  //       ScaffoldMessenger.of(
+  //         context,
+  //       ).showSnackBar(SnackBar(content: Text('Error sa pag-update: $e')));
+  //     }
+  //   }
+  // }
 
   // Logout function
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Consumer<UserService>(
-        builder: (context, userService, child) {
-          if (_isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return SafeArea(
+      top: true, // I-add ang SafeArea sa top para dili ma-overlap sa status bar
+      child: Scaffold(
+        body: Consumer<UserService>(
+          builder: (context, userService, child) {
+            if (_isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          return RefreshIndicator(
-            onRefresh: _loadAllProfileData,
-            child: CustomScrollView(
-              slivers: [
-                // Custom App Bar with Cover Image and Profile Picture
-                SliverAppBar(
-                  expandedHeight: 320.0,
-                  pinned: true,
-                  flexibleSpace: FlexibleSpaceBar(
-                    background: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        // Cover Image
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.green.shade700,
-                                Colors.green.shade900,
-                              ],
+            return RefreshIndicator(
+              onRefresh: _loadAllProfileData,
+              child: CustomScrollView(
+                slivers: [
+                  // Custom App Bar with Cover Image and Profile Picture
+                  SliverAppBar(
+                    expandedHeight:
+                        200.0, // Gi-maintain ang reduced height sa green container
+                    floating: false,
+                    pinned: true,
+                    backgroundColor: Colors.green.shade700,
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Cover Image - reduced height na karon
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.green.shade700,
+                                  Colors.green.shade900,
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        // Profile Picture and Name Container
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
+                          // Profile Info Container
+                          Positioned(
+                            bottom: 16,
+                            left: 16,
+                            right: 16,
+                            child: Row(
                               children: [
-                                // Profile Picture
+                                // Profile Picture - gi-revert sa original size
                                 Stack(
                                   alignment: Alignment.bottomRight,
                                   children: [
                                     Container(
+                                      width: 100, // Gi-revert balik sa 100
+                                      height: 100, // Gi-revert balik sa 100
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         border: Border.all(
-                                          color: Colors.white,
-                                          width: 4,
+                                          color: const Color.fromARGB(
+                                            255,
+                                            13,
+                                            13,
+                                            13,
+                                          ),
+                                          width: 2,
                                         ),
                                       ),
-                                      child: CircleAvatar(
-                                        radius: 60,
-                                        backgroundColor: Colors.grey[300],
-                                        backgroundImage:
-                                            userService.avatarUrl != null
-                                            ? NetworkImage(
-                                                userService.avatarUrl!,
-                                              )
-                                            : (userService.avatarImage != null
-                                                      ? FileImage(
-                                                          userService
-                                                              .avatarImage!,
-                                                        )
-                                                      : null)
-                                                  as ImageProvider?,
-                                        child:
-                                            (userService.avatarUrl == null &&
-                                                userService.avatarImage == null)
-                                            ? const Icon(Icons.person, size: 60)
-                                            : null,
+                                      child: Builder(
+                                        builder: (context) {
+                                          final String? avatarUrl =
+                                              userService.avatarUrl;
+                                          debugPrint(
+                                            "Current avatar URL: $avatarUrl",
+                                          );
+
+                                          if (avatarUrl != null &&
+                                              avatarUrl.isNotEmpty) {
+                                            return CircleAvatar(
+                                              radius:
+                                                  50, // Gi-revert balik sa 50
+                                              backgroundColor: Colors.grey[300],
+                                              backgroundImage: NetworkImage(
+                                                avatarUrl,
+                                              ),
+                                              onBackgroundImageError: (e, st) {
+                                                debugPrint(
+                                                  "Failed to load image: $e",
+                                                );
+                                              },
+                                            );
+                                          } else {
+                                            return const CircleAvatar(
+                                              radius:
+                                                  50, // Gi-revert balik sa 50
+                                              backgroundColor: Colors.grey,
+                                              child: Icon(
+                                                Icons.person,
+                                                size:
+                                                    50, // Gi-revert balik sa 50
+                                                color: Colors.white,
+                                              ),
+                                            );
+                                          }
+                                        },
                                       ),
                                     ),
                                     FloatingActionButton.small(
                                       onPressed: _pickImage,
                                       backgroundColor: Colors.green.shade600,
-                                      child: const Icon(Icons.camera_alt),
+                                      child: const Icon(
+                                        Icons.camera_alt,
+                                        size: 16,
+                                      ), // Original size
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 16),
-                                // User's Name (larger and bold)
-                                Text(
-                                  userService.userName,
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                // Email below name
-                                Text(
-                                  userService.userEmail,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
 
-                // Profile Content
-                SliverToBoxAdapter(
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16.0),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Stats Row
-                          Container(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              boxShadow: [
-                                BoxShadow(
-                                  // ignore: deprecated_member_use
-                                  color: Colors.grey.withOpacity(0.1),
-                                  spreadRadius: 1,
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildStatColumn('Trees Planted', '0'),
-                                _buildStatColumn('Challenges', '0'),
-                                _buildStatColumn('Points', '0'),
-                              ],
-                            ),
-                          ),
+                                const SizedBox(width: 16), // Original spacing
+                                // User Info - gi-maintain ang adjusted text sizes para sa compact container
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      // User's Name
+                                      Text(
+                                        userService.userName,
+                                        style: const TextStyle(
+                                          fontSize:
+                                              20, // Gi-maintain ang reduced font size
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      // Email
+                                      Text(
+                                        userService.userEmail,
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 14,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
 
-                          // Bio Section
-                          Container(
-                            margin: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  // ignore: deprecated_member_use
-                                  color: Colors.grey.withOpacity(0.1),
-                                  spreadRadius: 1,
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ListTile(
-                                  title: const Text(
-                                    'About',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    onPressed: _editBio,
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    0,
-                                    16,
-                                    16,
-                                  ),
-                                  child: Text(
-                                    userService.bio ??
-                                        'Add something about yourself...',
-                                    style: TextStyle(
-                                      color: userService.bio?.isEmpty ?? true
-                                          ? Colors.grey
-                                          : Colors.black87,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Recent Activity Section
-                          Container(
-                            margin: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  // ignore: deprecated_member_use
-                                  color: Colors.grey.withOpacity(0.1),
-                                  spreadRadius: 1,
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const ListTile(
-                                  title: Text(
-                                    'Recent Activity',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                // Add your activity items here
-                                const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: Text(
-                                      'No recent activity',
-                                      style: TextStyle(color: Colors.grey),
-                                    ),
+                                      // // Bio section
+                                      // const SizedBox(height: 6),
+                                      // Row(
+                                      //   children: [
+                                      //     Expanded(
+                                      //       child: Text(
+                                      //         userService.bio ??
+                                      //             'Add something about yourself...',
+                                      //         style: TextStyle(
+                                      //           // ignore: deprecated_member_use
+                                      //           color: Colors.white.withOpacity(
+                                      //             0.9,
+                                      //           ),
+                                      //           fontSize: 12,
+                                      //           fontStyle:
+                                      //               userService.bio == null ||
+                                      //                   userService.bio!.isEmpty
+                                      //               ? FontStyle.italic
+                                      //               : FontStyle.normal,
+                                      //         ),
+                                      //         maxLines: 1,
+                                      //         overflow: TextOverflow.ellipsis,
+                                      //       ),
+                                      //     ),
+                                      //     IconButton(
+                                      //       icon: const Icon(
+                                      //         Icons.edit,
+                                      //         color: Colors.white70,
+                                      //         size: 16,
+                                      //       ),
+                                      //       onPressed: _editBio,
+                                      //       constraints: const BoxConstraints(
+                                      //         maxHeight: 20,
+                                      //         maxWidth: 20,
+                                      //       ),
+                                      //       padding: EdgeInsets.zero,
+                                      //       tooltip: 'I-edit ang Bio',
+                                      //     ),
+                                      //   ],
+                                      // ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -374,11 +343,96 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+
+                  // Profile Content
+                  SliverToBoxAdapter(
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16.0),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Stats Row
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: Colors.white,
+                                boxShadow: [
+                                  BoxShadow(
+                                    // ignore: deprecated_member_use
+                                    color: Colors.grey.withOpacity(0.1),
+                                    spreadRadius: 1,
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  _buildStatColumn('Trees Planted', '0'),
+                                  _buildStatColumn('Challenges', '0'),
+                                  _buildStatColumn('Points', '0'),
+                                ],
+                              ),
+                            ),
+
+                            // Recent Activity Section
+                            Container(
+                              margin: const EdgeInsets.only(top: 16),
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    // ignore: deprecated_member_use
+                                    color: Colors.grey.withOpacity(0.1),
+                                    spreadRadius: 1,
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const ListTile(
+                                    title: Text(
+                                      'Recent Activity',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  // Add your activity items here
+                                  const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: Text(
+                                        'No recent activity',
+                                        style: TextStyle(color: Colors.grey),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
