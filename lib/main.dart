@@ -22,6 +22,10 @@ void main() async {
     url: 'https://xtgzxoszyrxzbqvfdfif.supabase.co',
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0Z3p4b3N6eXJ4emJxdmZkZmlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MzAwNjUsImV4cCI6MjA3MDUwNjA2NX0.H2D1E-358Dv4dRLwyzedUVp1Pdrj3nquSkCNLtsX1mQ',
+    // Add this parameter to ensure persistence
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
   );
 
   final userService = UserService();
@@ -112,6 +116,13 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Dinamikong background color base sa current theme mode
+    final barBackgroundColor = widget.isDark
+        ? const Color(0xFF1E1E1E)
+        : Colors.white;
+    // Text ug icon color na appropriate sa background
+    final contentColor = widget.isDark ? Colors.white : Colors.green.shade700;
+
     // I-wrap ang Scaffold sa SafeArea para ma-ensure nga black ang status bar area
     return Container(
       color: Colors.black, // Black background para sa SafeArea
@@ -120,18 +131,27 @@ class _MainScreenState extends State<MainScreen> {
           appBar: AppBar(
             leading: Builder(
               builder: (context) => IconButton(
-                icon: const FaIcon(FontAwesomeIcons.bars), // menu icon
+                icon: FaIcon(
+                  FontAwesomeIcons.bars,
+                  color: contentColor, // Dynamic color based on theme
+                ),
                 onPressed: () => Scaffold.of(context).openDrawer(),
               ),
             ),
-            title: const Text("AIgrove"),
+            title: Text(
+              "AIgrove",
+              style: TextStyle(
+                color: contentColor,
+              ), // Dynamic color based on theme
+            ),
+            backgroundColor: barBackgroundColor, // Dynamic color based on theme
             actions: [
               IconButton(
                 icon: FaIcon(
                   widget.isDark
-                      ? FontAwesomeIcons
-                            .moon // dark mode icon
-                      : FontAwesomeIcons.solidSun, // light mode icon
+                      ? FontAwesomeIcons.moon
+                      : FontAwesomeIcons.solidSun,
+                  color: contentColor, // Dynamic color based on theme
                 ),
                 onPressed: widget.toggleTheme,
               ),
@@ -139,60 +159,77 @@ class _MainScreenState extends State<MainScreen> {
           ),
           drawer: AppDrawer(), // Gi-maintain ang existing AppDrawer
           body: _pages[_currentIndex], // Gi-maintain ang existing pages
-          bottomNavigationBar: BottomNavigationBar(
-            type: BottomNavigationBarType.fixed,
-            currentIndex: _currentIndex,
-            selectedItemColor: const Color(0xFF2E7D32),
-            unselectedItemColor: Colors.grey,
-            // I-add ang mga properties para mas nindot ang design
-            elevation: 8,
-            backgroundColor: Colors.white,
-            selectedFontSize: 12,
-            unselectedFontSize: 10,
-            iconSize: 24,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            items: const [
-              BottomNavigationBarItem(
-                icon: FaIcon(FontAwesomeIcons.house), // Simple house
-                activeIcon: FaIcon(
-                  FontAwesomeIcons.houseChimney,
-                  size: 28,
-                ), // House with chimney when active
-                label: "Home",
-              ),
-              BottomNavigationBarItem(
-                icon: FaIcon(
-                  FontAwesomeIcons.camera,
-                ), // Camera para sa plant scanning
-                activeIcon: FaIcon(
-                  FontAwesomeIcons.cameraRetro,
-                  size: 28,
-                ), // Retro camera when active
-                label: "Scan",
-              ),
-              BottomNavigationBarItem(
-                icon: FaIcon(FontAwesomeIcons.locationDot), // Location pin
-                activeIcon: FaIcon(
-                  FontAwesomeIcons.mapLocationDot,
-                  size: 28,
-                ), // Map with location when active
-                label: "Map",
-              ),
-              BottomNavigationBarItem(
-                icon: FaIcon(
-                  FontAwesomeIcons.trophy,
-                ), // Star para sa achievements
-                activeIcon: FaIcon(
-                  FontAwesomeIcons.star,
-                  size: 28,
-                ), // Solid star when active
-                label: "Challenge",
-              ),
-            ],
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              color: barBackgroundColor, // Dynamic color based on theme
+              boxShadow: [
+                BoxShadow(
+                  // ignore: deprecated_member_use
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 5,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: BottomNavigationBar(
+              type: BottomNavigationBarType.fixed,
+              currentIndex: _currentIndex,
+              backgroundColor:
+                  barBackgroundColor, // Dynamic color based on theme
+              selectedItemColor: widget.isDark
+                  ? Colors
+                        .green
+                        .shade400 // Mas light nga green sa dark mode
+                  : Colors.green.shade700, // Dark green sa light mode
+              unselectedItemColor: widget.isDark
+                  ? Colors
+                        .grey // Grey sa dark mode
+                  : Colors.grey.shade600, // Darker grey sa light mode
+              elevation: 8,
+              selectedFontSize: 12,
+              unselectedFontSize: 10,
+              iconSize: 24,
+              onTap: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              items: const [
+                BottomNavigationBarItem(
+                  icon: FaIcon(FontAwesomeIcons.house),
+                  activeIcon: FaIcon(FontAwesomeIcons.houseChimney, size: 28),
+                  label: "Home",
+                ),
+                BottomNavigationBarItem(
+                  icon: FaIcon(
+                    FontAwesomeIcons.camera,
+                  ), // Camera para sa plant scanning
+                  activeIcon: FaIcon(
+                    FontAwesomeIcons.cameraRetro,
+                    size: 28,
+                  ), // Retro camera when active
+                  label: "Scan",
+                ),
+                BottomNavigationBarItem(
+                  icon: FaIcon(FontAwesomeIcons.locationDot), // Location pin
+                  activeIcon: FaIcon(
+                    FontAwesomeIcons.mapLocationDot,
+                    size: 28,
+                  ), // Map with location when active
+                  label: "Map",
+                ),
+                BottomNavigationBarItem(
+                  icon: FaIcon(
+                    FontAwesomeIcons.trophy,
+                  ), // Star para sa achievements
+                  activeIcon: FaIcon(
+                    FontAwesomeIcons.star,
+                    size: 28,
+                  ), // Solid star when active
+                  label: "Challenge",
+                ),
+              ],
+            ),
           ),
         ),
       ),

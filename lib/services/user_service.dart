@@ -71,8 +71,51 @@ class UserService extends ChangeNotifier {
     }
   }
 
+  // Enhanced initialize method to ensure session persistence
+  Future<bool> initialize() async {
+    try {
+      // Check if there's an existing session
+      final Session? session = _supabase.auth.currentSession;
+      _isAuthenticated = session != null;
+      _userId = session?.user.id;
+
+      if (_isAuthenticated && _userId != null) {
+        await loadUserProfile();
+        debugPrint('User session restored: $_userName');
+      } else {
+        debugPrint('No active session found');
+      }
+
+      // Listen to auth state changes
+      _supabase.auth.onAuthStateChange.listen((data) async {
+        final Session? session = data.session;
+        _isAuthenticated = session != null;
+        _userId = session?.user.id;
+
+        if (_isAuthenticated && _userId != null) {
+          await loadUserProfile();
+          debugPrint('Auth state changed: User logged in');
+        } else {
+          _clear();
+          debugPrint('Auth state changed: User logged out');
+        }
+        notifyListeners();
+      });
+
+      return _isAuthenticated;
+    } catch (e) {
+      debugPrint('Error initializing user service: $e');
+      return false;
+    }
+  }
+
+  // Check if user is authenticated without reloading profile
+  bool checkAuthenticated() {
+    return _supabase.auth.currentSession != null;
+  }
+
   // Initialize auth state
-  Future<void> initialize() async {
+  Future<void> initializeOld() async {
     // Check if there's an existing session
     final Session? session = _supabase.auth.currentSession;
     _isAuthenticated = session != null;

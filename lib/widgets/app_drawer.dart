@@ -117,6 +117,12 @@ class AppDrawer extends StatelessWidget {
                 // List items with improved styling
                 _buildDrawerItem(
                   context,
+                  icon: FontAwesomeIcons.chartLine,
+                  title: 'Dashboard',
+                  onTap: () => _navigateToDashboard(context),
+                ),
+                _buildDrawerItem(
+                  context,
                   icon: FontAwesomeIcons.clockRotateLeft,
                   title: 'History',
                   onTap: () => _navigateToHistory(context),
@@ -209,6 +215,10 @@ class AppDrawer extends StatelessWidget {
       context,
       MaterialPageRoute(builder: (context) => const ProfilePage()),
     );
+  }
+
+  void _navigateToDashboard(BuildContext context) {
+    Navigator.pushNamed(context, '/dashboard');
   }
 
   void _navigateToHistory(BuildContext context) {

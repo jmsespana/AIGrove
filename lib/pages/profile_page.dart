@@ -165,11 +165,18 @@ class _ProfilePageState extends State<ProfilePage> {
                 slivers: [
                   // Custom App Bar with Cover Image and Profile Picture
                   SliverAppBar(
-                    expandedHeight:
-                        200.0, // Gi-maintain ang reduced height sa green container
+                    expandedHeight: 200.0,
                     floating: false,
                     pinned: true,
                     backgroundColor: Colors.green.shade700,
+                    // I-customize ang back button
+                    leading: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios, // Mao ni ang '<' style na arrow
+                        color: Colors.white,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
                     flexibleSpace: FlexibleSpaceBar(
                       background: Stack(
                         fit: StackFit.expand,
