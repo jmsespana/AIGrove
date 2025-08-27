@@ -1,7 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/user_service.dart';
 
-class LandingPage extends StatelessWidget {
+class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
+
+  @override
+  State<LandingPage> createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Check authentication status after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuth();
+    });
+  }
+
+  void _checkAuth() {
+    // Get user service and check if authenticated
+    final userService = Provider.of<UserService>(context, listen: false);
+    if (userService.isAuthenticated) {
+      // I-redirect ang user sa home page kay naka-login na siya
+      Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,12 +38,8 @@ class LandingPage extends StatelessWidget {
             // Background image (walang blur)
             Image.asset('assets/landing_bg.jpg', fit: BoxFit.cover),
 
-            // I-tanggal ang dark overlay o gawing mas transparent
-            // Container(color: const Color.fromRGBO(0, 0, 0, 0.5)), <- tanggalin o baguhin ito
-
             // Optional: Kung gusto mo ng subtle effect lang para mabasa pa rin ang text
             Container(
-              // Mas light na gradient para maging readable ang text pero hindi masyadong malabo ang image
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -48,7 +69,6 @@ class LandingPage extends StatelessWidget {
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
-                              // Shadow para mabasa ang text kahit walang dark overlay
                               shadows: [
                                 Shadow(
                                   color: Colors.black54,
@@ -64,7 +84,6 @@ class LandingPage extends StatelessWidget {
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
-                              // Shadow para mabasa ang text kahit walang dark overlay
                               shadows: [
                                 Shadow(
                                   color: Colors.black54,
