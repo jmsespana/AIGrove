@@ -470,10 +470,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 color: Colors.green,
               ),
             ),
-            const SizedBox(height: 4),
             Text(
               label,
-              style: const TextStyle(color: Colors.grey, fontSize: 14),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         );
