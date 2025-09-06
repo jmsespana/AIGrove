@@ -115,12 +115,7 @@ class AppDrawer extends StatelessWidget {
                 const Divider(height: 1),
 
                 // List items with improved styling
-                _buildDrawerItem(
-                  context,
-                  icon: FontAwesomeIcons.chartLine,
-                  title: 'Dashboard',
-                  onTap: () => _navigateToDashboard(context),
-                ),
+                // Dashboard item removed
                 _buildDrawerItem(
                   context,
                   icon: FontAwesomeIcons.clockRotateLeft,
@@ -217,9 +212,7 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  void _navigateToDashboard(BuildContext context) {
-    Navigator.pushNamed(context, '/dashboard');
-  }
+  // _navigateToDashboard method removed
 
   void _navigateToHistory(BuildContext context) {
     Navigator.pushNamed(context, '/history');
