@@ -8,6 +8,10 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
+// Import the extracted models and widgets
+import '../models/map_models.dart';
+import '../widgets/map_widgets.dart';
+
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
 
@@ -18,7 +22,7 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage> {
   final MapController _mapController = MapController();
 
-  // Caraga Region center coordinates (instead of Butuan City)
+  // Caraga Region center coordinates
   static const LatLng _caragaRegionCenter = LatLng(9.0, 125.5);
 
   // Caraga Region bounds for focusing the map
@@ -35,6 +39,9 @@ class _MapPageState extends State<MapPage> {
 
   // Heat map indicators for species distribution
   final List<Marker> _distributionMarkers = [];
+
+  // Environmental impact markers
+  final List<Marker> _environmentalImpactMarkers = [];
 
   // Species count by province for distribution analysis
   final Map<String, Map<String, int>> _speciesDistribution = {
@@ -106,7 +113,6 @@ class _MapPageState extends State<MapPage> {
       location: const LatLng(9.8617, 126.0569),
       province: "Surigao del Norte",
     ),
-    // Dugang pa og ubang mangrove locations sa Caraga
     MangroveLocation(
       name: "Hinatuan Mangrove Park",
       species: "Rhizophora stylosa",
@@ -140,15 +146,13 @@ class _MapPageState extends State<MapPage> {
     'Lumnitzera racemosa': Colors.purple.shade400,
   };
 
+  // State variables
   bool _isLoading = true;
   bool _showDistribution = false;
   bool _showEnvironmentalImpact = false;
   Timer? _distributionUpdateTimer;
   String _selectedProvince = 'All Provinces';
   String _selectedSpecies = 'All Species';
-
-  // Environmental impact markers
-  final List<Marker> _environmentalImpactMarkers = [];
 
   // Environmental impact data (from the dashboard)
   final Map<String, EnvironmentalImpact> _environmentalImpactData = {
@@ -277,21 +281,14 @@ class _MapPageState extends State<MapPage> {
                   onTap: () =>
                       _showSpeciesDistributionInfo(province, species, count),
                   child: Container(
-                    width: 24,
-                    height: 24,
+                    width: 30,
+                    height: 30,
                     decoration: BoxDecoration(
                       color:
                           _speciesColors[species]?.withOpacity(0.7) ??
                           Colors.green.withOpacity(0.7),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 3,
-                          spreadRadius: 1,
-                        ),
-                      ],
+                      border: Border.all(color: Colors.white, width: 1.5),
                     ),
                   ),
                 ),
@@ -343,13 +340,6 @@ class _MapPageState extends State<MapPage> {
                     color: impactData.color.withOpacity(0.8),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 5,
-                        spreadRadius: 1,
-                      ),
-                    ],
                   ),
                   child: Icon(impactData.icon, color: Colors.white, size: 20),
                 ),
@@ -466,10 +456,7 @@ class _MapPageState extends State<MapPage> {
                 const SizedBox(width: 8),
                 Text(
                   '${impact.value} ${impact.unit}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -556,7 +543,7 @@ class _MapPageState extends State<MapPage> {
               Container(
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Colors.white.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: Text(species, style: const TextStyle(fontSize: 10)),
@@ -587,11 +574,8 @@ class _MapPageState extends State<MapPage> {
   }
 
   // Simple method to determine which province a location belongs to
-  // In a real app, this would use proper GeoJSON boundaries or API
   String? _determineProvince(LatLng position) {
     // Simplified province boundary check based on coordinates
-    // This is a very rough approximation and should be replaced
-    // with proper GeoJSON boundaries in a production app
     final lat = position.latitude;
     final lng = position.longitude;
 
@@ -623,64 +607,16 @@ class _MapPageState extends State<MapPage> {
           point: position,
           width: 110,
           height: 90,
-          child: GestureDetector(
+          child: MangroveMarker(
+            position: position,
+            name: name,
+            species: species,
+            speciesColor: _speciesColors[species] ?? Colors.green,
             onTap: () => _showMangroveEditDialog(
               position,
               name,
               species,
               province ?? 'Unknown',
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.park,
-                  color: _speciesColors[species] ?? const Color(0xFF2E7D32),
-                  size: 35,
-                ),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(
-                      color:
-                          _speciesColors[species]?.withOpacity(0.8) ??
-                          Colors.green.shade800,
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      Text(
-                        species,
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontStyle: FontStyle.italic,
-                          color: Colors.grey[800],
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      if (province != null && province != 'Unknown')
-                        Text(
-                          province,
-                          style: const TextStyle(
-                            fontSize: 8,
-                            color: Colors.grey,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                    ],
-                  ),
-                ),
-              ],
             ),
           ),
         ),
@@ -724,11 +660,12 @@ class _MapPageState extends State<MapPage> {
               ),
               items:
                   [
-                    'Unknown',
                     'Agusan del Norte',
+                    'Agusan del Sur',
                     'Surigao del Norte',
                     'Surigao del Sur',
                     'Dinagat Islands',
+                    'Unknown',
                   ].map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
@@ -743,16 +680,13 @@ class _MapPageState extends State<MapPage> {
             Row(
               children: [
                 Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: _speciesColors[currentSpecies] ?? Colors.green,
-                    shape: BoxShape.circle,
-                  ),
+                  width: 20,
+                  height: 20,
+                  color: _speciesColors[currentSpecies] ?? Colors.green,
                 ),
                 const SizedBox(width: 8),
                 const Text(
-                  'Color represents species type on the map',
+                  'Species color will update automatically',
                   style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
                 ),
               ],
@@ -897,11 +831,12 @@ class _MapPageState extends State<MapPage> {
                 ),
                 items:
                     [
-                      'Unknown',
                       'Agusan del Norte',
+                      'Agusan del Sur',
                       'Surigao del Norte',
                       'Surigao del Sur',
                       'Dinagat Islands',
+                      'Unknown',
                     ].map((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
@@ -941,7 +876,6 @@ class _MapPageState extends State<MapPage> {
                     _speciesDistribution[selectedProvince] = {species: 1};
                   }
 
-                  // Update visualization if enabled
                   if (_showDistribution) {
                     _generateSpeciesDistributionMarkers();
                   }
@@ -1448,75 +1382,6 @@ class _MapPageState extends State<MapPage> {
           ),
         ],
       ),
-    );
-  }
-}
-
-// Model class para sa mangrove location
-class MangroveLocation {
-  final String name;
-  final String species;
-  final LatLng location;
-  final String province;
-
-  MangroveLocation({
-    required this.name,
-    required this.species,
-    required this.location,
-    required this.province,
-  });
-}
-
-// Class model para sa environmental impact data
-class EnvironmentalImpact {
-  final String title;
-  final String value;
-  final String unit;
-  final String description;
-  final IconData icon;
-  final Color color;
-
-  EnvironmentalImpact({
-    required this.title,
-    required this.value,
-    required this.unit,
-    required this.description,
-    required this.icon,
-    required this.color,
-  });
-}
-
-// Simple implementation of a current location layer
-class CurrentLocationLayer extends StatelessWidget {
-  const CurrentLocationLayer({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<Position>(
-      stream: Geolocator.getPositionStream(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return Container();
-        }
-
-        final position = snapshot.data!;
-        return MarkerLayer(
-          markers: [
-            Marker(
-              point: LatLng(position.latitude, position.longitude),
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.7),
-                  shape: BoxShape.circle,
-                  border: Border.all(width: 2, color: Colors.white),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }
