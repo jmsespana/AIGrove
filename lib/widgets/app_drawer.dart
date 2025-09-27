@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:provider/provider.dart'; // Add this import
+import 'package:provider/provider.dart';
 import '../pages/profile_page.dart';
+import '../pages/history_page.dart'; // I-add para direct navigation
+import '../pages/about_page.dart'; // I-add para direct navigation
 import '../services/user_service.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -33,12 +35,10 @@ class AppDrawer extends StatelessWidget {
                     child: InkWell(
                       onTap: () => _navigateToProfile(context),
                       child: Container(
-                        padding: const EdgeInsets.all(
-                          16,
-                        ), // I-adjust ang padding kay naa na'y SafeArea
+                        padding: const EdgeInsets.all(16),
                         child: Row(
                           children: [
-                            // Updated Avatar handling
+                            // Avatar nga naka-handle sa tanan posibleng cases
                             CircleAvatar(
                               radius: 32,
                               backgroundColor: Colors.white,
@@ -66,9 +66,10 @@ class AppDrawer extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // User name lang, wala na'y email
                                   Text(
-                                    userService.userName,
+                                    userService.userName.isEmpty
+                                        ? "AIGrove User"
+                                        : userService.userName,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 18,
@@ -77,7 +78,6 @@ class AppDrawer extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 8),
-                                  // View Profile button
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
@@ -111,11 +111,9 @@ class AppDrawer extends StatelessWidget {
                   ),
                 ),
 
-                // Divider
                 const Divider(height: 1),
 
-                // List items with improved styling
-                // Dashboard item removed
+                // Menu items with improved styling
                 _buildDrawerItem(
                   context,
                   icon: FontAwesomeIcons.clockRotateLeft,
@@ -203,29 +201,79 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // Default navigation methods (you can customize these)
+  // Navigation methods with fallback for direct navigation
+
   void _navigateToProfile(BuildContext context) {
-    Navigator.pop(context); // Close the drawer first
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ProfilePage()),
-    );
+    try {
+      Navigator.pushNamed(context, '/profile');
+    } catch (e) {
+      debugPrint('Error using named route for profile: $e');
+      // Fallback to direct navigation
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfilePage()),
+      );
+    }
   }
 
-  // _navigateToDashboard method removed
-
   void _navigateToHistory(BuildContext context) {
-    Navigator.pushNamed(context, '/history');
+    try {
+      // I-try una ang named route
+      Navigator.pushNamed(context, '/history');
+    } catch (e) {
+      debugPrint('Error using named route for history: $e');
+      // Fallback sa direct navigation using import
+      try {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HistoryPage()),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'History page not found. Please check implementation.',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   void _navigateToSettings(BuildContext context) {
-    Navigator.pushNamed(context, '/settings');
+    try {
+      Navigator.pushNamed(context, '/settings');
+    } catch (e) {
+      debugPrint('Error navigating to settings: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Settings page not available')),
+      );
+    }
   }
 
   void _navigateToAbout(BuildContext context) {
-    Navigator.pushNamed(context, '/about');
+    try {
+      // I-try una ang named route
+      Navigator.pushNamed(context, '/about');
+    } catch (e) {
+      debugPrint('Error using named route for about: $e');
+      // Fallback sa direct navigation using import
+      try {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AboutPage()),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('About page not found. Please check implementation.'),
+          ),
+        );
+      }
+    }
   }
 
+  // Update logout handling to use UserService
   void _handleLogout(BuildContext context) {
     // Show confirmation dialog
     showDialog(
@@ -245,7 +293,6 @@ class AppDrawer extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                // Add your actual logout logic here
                 _performLogout(context);
               },
               style: ElevatedButton.styleFrom(
@@ -260,12 +307,15 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // Update logout handling to use UserService
   void _performLogout(BuildContext context) async {
     try {
       await context.read<UserService>().signOut();
       if (context.mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/landing',
+          (route) => false,
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -276,19 +326,3 @@ class AppDrawer extends StatelessWidget {
     }
   }
 }
-
-// Example usage in your app:
-/*
-AppDrawer(
-  userName: 'John Doe',
-  userEmail: 'john.doe@example.com',
-  avatarImagePath: 'assets/user_avatar.png',
-  onProfileTap: () {
-    // Custom profile navigation
-  },
-  onHistoryTap: () {
-    // Custom history navigation
-  },
-  // ... other callbacks
-)
-*/
