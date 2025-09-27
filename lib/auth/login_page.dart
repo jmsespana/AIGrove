@@ -1,4 +1,3 @@
-// pages/login_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -71,6 +70,22 @@ class _LoginPageState extends State<LoginPage> {
             Image.asset('assets/landing_bg.jpg', fit: BoxFit.cover),
             // Dark overlay
             Container(color: Colors.black.withValues(alpha: 0.4)),
+
+            // Back button in top-left corner
+            Positioned(
+              top: 16,
+              left: 16,
+              child: IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios,
+                  color: Colors.white,
+                  size: 28,
+                ),
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/landing');
+                },
+              ),
+            ),
 
             // Login card
             Center(

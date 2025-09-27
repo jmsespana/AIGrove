@@ -70,7 +70,7 @@ class _RegisterPageState extends State<RegisterPage> {
     if (passwordController.text != confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Dili parehas ang passwords'),
+          content: Text('Password doesn\'t match!'),
         ), // Bisaya translation
       );
       return;
@@ -415,13 +415,33 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 20),
                         SizedBox(
                           width: double.infinity,
+                          height: 50,
                           child: ElevatedButton(
                             onPressed: loading ? null : _register,
+                            style: ElevatedButton.styleFrom(
+                              // ignore: deprecated_member_use
+                              backgroundColor: Colors.white.withOpacity(0.9),
+                              foregroundColor: Colors.black87,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
                             child: loading
-                                ? const CircularProgressIndicator(
-                                    color: Colors.white,
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
-                                : const Text("Sign Up"),
+                                : const Text(
+                                    "Sign Up",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                           ),
                         ),
                         const SizedBox(height: 20),

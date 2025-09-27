@@ -294,4 +294,23 @@ class ProfileService extends ChangeNotifier {
       // Dili na i-rethrow kay activity logging is not critical
     }
   }
+
+  // Add this method to ProfileService class
+  Future<List<Map<String, dynamic>>> getQuizHistory() async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return [];
+
+      final quizResults = await Supabase.instance.client
+          .from('quiz_results')
+          .select()
+          .eq('user_id', user.id)
+          .order('completed_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(quizResults);
+    } catch (e) {
+      debugPrint('Error getting quiz history: $e');
+      return [];
+    }
+  }
 }
