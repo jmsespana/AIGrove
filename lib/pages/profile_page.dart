@@ -382,7 +382,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceEvenly,
                                 children: [
-                                  _buildStatColumn('Trees Planted', '0'),
+                                  _buildStatColumn('Total scans', '0'),
                                   _buildStatColumn('Challenges', '0'),
                                   _buildStatColumn('Points', '0'),
                                 ],
