@@ -12,15 +12,24 @@ AIGrove is a Flutter application focusing on eco-friendly AI assistance. The pro
 
 ```
 lib/
-├── main.dart           # Application entry point
-├── auth/              # Authentication related pages
+├── main.dart                # Application entry point
+├── auth/                    # Authentication related pages
 │   ├── landing_page.dart
 │   ├── login_page.dart
 │   └── register_page.dart
-├── pages/             # Main application pages
-├── services/          # Business logic and API services
-├── theme/            # Theme configuration
-└── widgets/          # Reusable UI components
+├── pages/                   # Main application pages (Home, Scan, Map, Challenge, Profile, etc.)
+│   ├── home_page.dart
+│   ├── scan_page.dart
+│   ├── map_page.dart
+│   ├── challenge_page.dart
+│   └── profile_page.dart
+├── services/                # Business logic and API services
+│   ├── user_service.dart
+│   └── profile_service.dart
+├── theme/                   # Theme configuration
+│   └── app_theme.dart
+├── widgets/                 # Reusable UI components
+│   └── app_drawer.dart
 ```
 
 ## Key Patterns and Conventions

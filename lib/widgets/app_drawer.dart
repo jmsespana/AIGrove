@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:provider/provider.dart'; // Add this import
+import 'package:provider/provider.dart';
 import '../pages/profile_page.dart';
+import '../pages/history_page.dart'; // I-add para direct navigation
+import '../pages/about_page.dart'; // I-add para direct navigation
 import '../services/user_service.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -10,168 +12,160 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      child: Consumer<UserService>(
-        // Wrap with Consumer
-        builder: (context, userService, child) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Clickable profile header with avatar and name
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.green.shade700, Colors.green.shade800],
+      child: SafeArea(
+        // I-add ang SafeArea para dili ma-overlap sa status bar
+        child: Consumer<UserService>(
+          // Wrap with Consumer
+          builder: (context, userService, child) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Clickable profile header with avatar and name
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.green.shade700, Colors.green.shade800],
+                    ),
                   ),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _navigateToProfile(context),
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
-                      child: Row(
-                        children: [
-                          // Updated Avatar handling
-                          CircleAvatar(
-                            radius: 32,
-                            backgroundColor: Colors.white,
-                            backgroundImage: userService.avatarUrl != null
-                                ? NetworkImage(userService.avatarUrl!)
-                                : (userService.avatarImage != null
-                                          ? FileImage(userService.avatarImage!)
-                                          : null)
-                                      as ImageProvider?,
-                            child:
-                                (userService.avatarUrl == null &&
-                                    userService.avatarImage == null)
-                                ? const Icon(
-                                    Icons.person,
-                                    size: 40,
-                                    color: Colors.green,
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Email first
-                                if (userService.userEmail.isNotEmpty) ...[
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _navigateToProfile(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            // Avatar nga naka-handle sa tanan posibleng cases
+                            CircleAvatar(
+                              radius: 32,
+                              backgroundColor: Colors.white,
+                              backgroundImage: userService.avatarUrl != null
+                                  ? NetworkImage(userService.avatarUrl!)
+                                  : (userService.avatarImage != null
+                                            ? FileImage(
+                                                userService.avatarImage!,
+                                              )
+                                            : null)
+                                        as ImageProvider?,
+                              child:
+                                  (userService.avatarUrl == null &&
+                                      userService.avatarImage == null)
+                                  ? const Icon(
+                                      Icons.person,
+                                      size: 40,
+                                      color: Colors.green,
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
                                   Text(
-                                    userService.userEmail,
+                                    userService.userName.isEmpty
+                                        ? "AIGrove User"
+                                        : userService.userName,
                                     style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 4),
-                                ],
-                                // Name second (above View Profile)
-                                Text(
-                                  userService.userName,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 8),
-                                // View Profile button
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white24,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Text(
-                                    'View Profile',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white24,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Text(
+                                      'View Profile',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          const Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.white70,
-                            size: 16,
-                          ),
-                        ],
+                            const Icon(
+                              Icons.arrow_forward_ios,
+                              color: Colors.white70,
+                              size: 16,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
 
-              // Divider
-              const Divider(height: 1),
+                const Divider(height: 1),
 
-              // List items with improved styling
-              _buildDrawerItem(
-                context,
-                icon: FontAwesomeIcons.clockRotateLeft,
-                title: 'History',
-                onTap: () => _navigateToHistory(context),
-              ),
-              _buildDrawerItem(
-                context,
-                icon: FontAwesomeIcons.gear,
-                title: 'Settings',
-                onTap: () => _navigateToSettings(context),
-              ),
-              _buildDrawerItem(
-                context,
-                icon: FontAwesomeIcons.circleInfo,
-                title: 'About',
-                onTap: () => _navigateToAbout(context),
-              ),
+                // Menu items with improved styling
+                _buildDrawerItem(
+                  context,
+                  icon: FontAwesomeIcons.clockRotateLeft,
+                  title: 'History',
+                  onTap: () => _navigateToHistory(context),
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: FontAwesomeIcons.gear,
+                  title: 'Settings',
+                  onTap: () => _navigateToSettings(context),
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: FontAwesomeIcons.circleInfo,
+                  title: 'About',
+                  onTap: () => _navigateToAbout(context),
+                ),
 
-              const Spacer(),
+                const Spacer(),
 
-              // Logout button with confirmation
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _handleLogout(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                // Logout button with confirmation
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _handleLogout(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 2,
                       ),
-                      elevation: 2,
-                    ),
-                    icon: const Icon(Icons.logout, size: 20),
-                    label: const Text(
-                      'Logout',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                      icon: const Icon(Icons.logout, size: 20),
+                      label: const Text(
+                        'Logout',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -207,27 +201,79 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // Default navigation methods (you can customize these)
+  // Navigation methods with fallback for direct navigation
+
   void _navigateToProfile(BuildContext context) {
-    Navigator.pop(context); // Close the drawer first
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ProfilePage()),
-    );
+    try {
+      Navigator.pushNamed(context, '/profile');
+    } catch (e) {
+      debugPrint('Error using named route for profile: $e');
+      // Fallback to direct navigation
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfilePage()),
+      );
+    }
   }
 
   void _navigateToHistory(BuildContext context) {
-    Navigator.pushNamed(context, '/history');
+    try {
+      // I-try una ang named route
+      Navigator.pushNamed(context, '/history');
+    } catch (e) {
+      debugPrint('Error using named route for history: $e');
+      // Fallback sa direct navigation using import
+      try {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HistoryPage()),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'History page not found. Please check implementation.',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   void _navigateToSettings(BuildContext context) {
-    Navigator.pushNamed(context, '/settings');
+    try {
+      Navigator.pushNamed(context, '/settings');
+    } catch (e) {
+      debugPrint('Error navigating to settings: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Settings page not available')),
+      );
+    }
   }
 
   void _navigateToAbout(BuildContext context) {
-    Navigator.pushNamed(context, '/about');
+    try {
+      // I-try una ang named route
+      Navigator.pushNamed(context, '/about');
+    } catch (e) {
+      debugPrint('Error using named route for about: $e');
+      // Fallback sa direct navigation using import
+      try {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AboutPage()),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('About page not found. Please check implementation.'),
+          ),
+        );
+      }
+    }
   }
 
+  // Update logout handling to use UserService
   void _handleLogout(BuildContext context) {
     // Show confirmation dialog
     showDialog(
@@ -247,7 +293,6 @@ class AppDrawer extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                // Add your actual logout logic here
                 _performLogout(context);
               },
               style: ElevatedButton.styleFrom(
@@ -262,12 +307,15 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // Update logout handling to use UserService
   void _performLogout(BuildContext context) async {
     try {
       await context.read<UserService>().signOut();
       if (context.mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/landing',
+          (route) => false,
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -278,19 +326,3 @@ class AppDrawer extends StatelessWidget {
     }
   }
 }
-
-// Example usage in your app:
-/*
-AppDrawer(
-  userName: 'John Doe',
-  userEmail: 'john.doe@example.com',
-  avatarImagePath: 'assets/user_avatar.png',
-  onProfileTap: () {
-    // Custom profile navigation
-  },
-  onHistoryTap: () {
-    // Custom history navigation
-  },
-  // ... other callbacks
-)
-*/
