@@ -677,10 +677,28 @@ class _QuizScreenState extends State<QuizScreen> {
 
       debugPrint('Nag-finish og quiz, score: $_score');
 
-      // I-save sa database ang points ug challenge completion
+      // Calculate results
+      int correctAnswers = 0;
+      for (int i = 0; i < _shuffledQuestions.length; i++) {
+        if (_selectedAnswers[i] == _shuffledQuestions[i].correctAnswer) {
+          correctAnswers++;
+        }
+      }
+
+      // I-save sa database ang complete quiz results
       await Future.wait([
         profileService.addPoints(_score),
         profileService.addCompletedChallenge(),
+        // I-save ang detailed quiz history (need i-add ni nga method sa ProfileService)
+        profileService.saveQuizHistory(
+          categoryId: widget.category.id,
+          categoryName: widget.category.name,
+          score: _score,
+          totalQuestions: _shuffledQuestions.length,
+          correctAnswers: correctAnswers,
+          timeSpent: _totalTimeSpent,
+          difficulty: widget.category.difficulty.name,
+        ),
       ]);
 
       debugPrint('Successfully na-save ang quiz results');
@@ -699,8 +717,7 @@ class _QuizScreenState extends State<QuizScreen> {
             totalQuestions: _shuffledQuestions.length,
             timeSpent: _totalTimeSpent,
             selectedAnswers: _selectedAnswers,
-            shuffledQuestions:
-                _shuffledQuestions, // Pass ang shuffled questions
+            shuffledQuestions: _shuffledQuestions,
           ),
         ),
       );
@@ -732,8 +749,7 @@ class _QuizScreenState extends State<QuizScreen> {
             totalQuestions: _shuffledQuestions.length,
             timeSpent: _totalTimeSpent,
             selectedAnswers: _selectedAnswers,
-            shuffledQuestions:
-                _shuffledQuestions, // Pass ang shuffled questions
+            shuffledQuestions: _shuffledQuestions,
           ),
         ),
       );
