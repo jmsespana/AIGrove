@@ -8,25 +8,25 @@ class ProfileService extends ChangeNotifier {
 
   final _supabase = Supabase.instance.client;
 
-  // Profile stats - mga stats sa user
+  // Profile stats - user statistics
   int _treesPlanted = 0;
   int _challengesCompleted = 0;
   int _points = 0;
   List<Map<String, dynamic>> _recentActivity = [];
 
-  // Getters para ma-access ang stats
+  // Getters to access stats
   int get treesPlanted => _treesPlanted;
   int get challengesCompleted => _challengesCompleted;
   int get points => _points;
   List<Map<String, dynamic>> get recentActivity => _recentActivity;
 
-  // Load profile stats - kuhaon ang stats sa database
+  // Load profile stats - fetch stats from database
   Future<void> loadProfileStats() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) return;
 
-      // Kuhaon ang stats gikan sa user_stats table
+      // Get stats from user_stats table
       final stats = await _supabase
           .from('user_stats')
           .select()
@@ -38,7 +38,7 @@ class ProfileService extends ChangeNotifier {
         _challengesCompleted = stats['challenges_completed'] ?? 0;
         _points = stats['points'] ?? 0;
       } else {
-        // I-create ang default stats kung wala pa
+        // Create default stats if not exists
         await _supabase.from('user_stats').upsert({
           'user_id': user.id,
           'trees_planted': 0,
@@ -46,7 +46,7 @@ class ProfileService extends ChangeNotifier {
           'points': 0,
         }, onConflict: 'user_id');
 
-        // I-set ang default values
+        // Set default values
         _treesPlanted = 0;
         _challengesCompleted = 0;
         _points = 0;
@@ -64,11 +64,11 @@ class ProfileService extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      debugPrint('Error sa pag-load ng profile stats: $e');
+      debugPrint('Error loading profile stats: $e');
     }
   }
 
-  // Update trees planted - para sa tree planting feature
+  // Update trees planted - for tree planting feature
   Future<void> updateTreesPlanted(int count) async {
     try {
       final user = _supabase.auth.currentUser;
@@ -82,8 +82,8 @@ class ProfileService extends ChangeNotifier {
 
       _treesPlanted = count;
 
-      // I-add sa activity log
-      await _addActivity('Nagtanom og kahoy');
+      // Add to activity log
+      await _addActivity('Planted a tree');
 
       notifyListeners();
     } catch (e) {
@@ -92,7 +92,7 @@ class ProfileService extends ChangeNotifier {
     }
   }
 
-  // Update challenges count - manual update kung needed
+  // Update challenges count - manual update if needed
   Future<void> updateChallenges(int count) async {
     try {
       final user = _supabase.auth.currentUser;
@@ -112,48 +112,48 @@ class ProfileService extends ChangeNotifier {
     }
   }
 
-  // Add points from quiz - para sa quiz feature
+  // Add points from quiz - for quiz feature
   Future<void> addPoints(int points) async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
-        debugPrint('Walang naka-login nga user - dili ma-save ang points');
+        debugPrint('No logged in user - cannot save points');
         throw Exception('User not logged in');
       }
 
-      debugPrint('Nag-add og points para sa user: ${user.id}, Points: $points');
+      debugPrint('Adding points for user: ${user.id}, Points: $points');
 
-      // I-try ang RPC function muna
+      // Try RPC function first
       try {
         final response = await _supabase.rpc(
           'add_user_points',
           params: {'user_id_param': user.id, 'points_to_add': points},
         );
 
-        debugPrint('Points na-add na via RPC: $response');
+        debugPrint('Points added via RPC: $response');
 
-        // I-reload ang stats para ma-update ang local state
+        // Reload stats to update local state
         await loadProfileStats();
       } catch (rpcError) {
         debugPrint('RPC failed, using fallback method: $rpcError');
         await _addPointsFallback(points);
       }
 
-      // I-add sa activity log
-      await _addActivity('Nakakuha og $points points gikan sa quiz');
+      // Add to activity log
+      await _addActivity('Earned $points points from quiz');
     } catch (e) {
-      debugPrint('Error sa pag-add og points: $e');
+      debugPrint('Error adding points: $e');
       rethrow;
     }
   }
 
-  // Fallback method kung nag-fail ang RPC
+  // Fallback method if RPC fails
   Future<void> _addPointsFallback(int points) async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) return;
 
-      // I-get ang current stats
+      // Get current stats
       final currentStats = await _supabase
           .from('user_stats')
           .select()
@@ -161,7 +161,7 @@ class ProfileService extends ChangeNotifier {
           .maybeSingle();
 
       if (currentStats == null) {
-        // I-create new record
+        // Create new record
         await _supabase.from('user_stats').insert({
           'user_id': user.id,
           'points': points,
@@ -169,7 +169,7 @@ class ProfileService extends ChangeNotifier {
           'trees_planted': 0,
         });
       } else {
-        // I-update existing record
+        // Update existing record
         await _supabase
             .from('user_stats')
             .update({
@@ -179,53 +179,53 @@ class ProfileService extends ChangeNotifier {
             .eq('user_id', user.id);
       }
 
-      // I-update ang local state
+      // Update local state
       _points = (currentStats?['points'] ?? 0) + points;
       notifyListeners();
 
-      debugPrint('Points na-add na via fallback method');
+      debugPrint('Points added via fallback method');
     } catch (e) {
-      debugPrint('Fallback method failed din: $e');
+      debugPrint('Fallback method also failed: $e');
       rethrow;
     }
   }
 
-  // Add completed challenge - para sa quiz completion
+  // Add completed challenge - for quiz completion
   Future<void> addCompletedChallenge() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
-        debugPrint('Walang naka-login nga user - dili ma-save ang challenge');
+        debugPrint('No logged in user - cannot save challenge');
         throw Exception('User not logged in');
       }
 
-      debugPrint('Nag-add og completed challenge para sa user: ${user.id}');
+      debugPrint('Adding completed challenge for user: ${user.id}');
 
-      // I-try ang RPC function muna
+      // Try RPC function first
       try {
         final response = await _supabase.rpc(
           'add_user_challenge',
           params: {'user_id_param': user.id},
         );
 
-        debugPrint('Challenge na-add na via RPC: $response');
+        debugPrint('Challenge added via RPC: $response');
 
-        // I-reload ang stats para ma-update ang local state
+        // Reload stats to update local state
         await loadProfileStats();
       } catch (rpcError) {
         debugPrint('RPC failed, using fallback method: $rpcError');
         await _addChallengeFallback();
       }
 
-      // I-add sa activity log
-      await _addActivity('Natapos ang isang challenge');
+      // Add to activity log
+      await _addActivity('Completed a challenge');
     } catch (e) {
-      debugPrint('Error sa pag-add og challenge: $e');
+      debugPrint('Error adding challenge: $e');
       rethrow;
     }
   }
 
-  // Fallback method para sa challenge
+  // Fallback method for challenge
   Future<void> _addChallengeFallback() async {
     try {
       final user = _supabase.auth.currentUser;
@@ -255,18 +255,18 @@ class ProfileService extends ChangeNotifier {
             .eq('user_id', user.id);
       }
 
-      // I-update ang local state
+      // Update local state
       _challengesCompleted = (currentStats?['challenges_completed'] ?? 0) + 1;
       notifyListeners();
 
-      debugPrint('Challenge na-add na via fallback method');
+      debugPrint('Challenge added via fallback method');
     } catch (e) {
-      debugPrint('Challenge fallback failed din: $e');
+      debugPrint('Challenge fallback also failed: $e');
       rethrow;
     }
   }
 
-  // Private method para sa pag-add og activity
+  // Private method to add activity
   Future<void> _addActivity(String description) async {
     try {
       final user = _supabase.auth.currentUser;
@@ -278,9 +278,9 @@ class ProfileService extends ChangeNotifier {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      debugPrint('Activity na-add na: $description');
+      debugPrint('Activity added: $description');
 
-      // I-reload ang recent activity
+      // Reload recent activity
       final activity = await _supabase
           .from('user_activity')
           .select()
@@ -290,12 +290,12 @@ class ProfileService extends ChangeNotifier {
 
       _recentActivity = List<Map<String, dynamic>>.from(activity);
     } catch (e) {
-      debugPrint('Error sa pag-add ng activity: $e');
-      // Dili na i-rethrow kay activity logging is not critical
+      debugPrint('Error adding activity: $e');
+      // Don't rethrow since activity logging is not critical
     }
   }
 
-  // Add this method to ProfileService class
+  // Get quiz history
   Future<List<Map<String, dynamic>>> getQuizHistory() async {
     try {
       final user = Supabase.instance.client.auth.currentUser;
@@ -311,6 +311,39 @@ class ProfileService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error getting quiz history: $e');
       return [];
+    }
+  }
+
+  // Save detailed quiz history
+  Future<void> saveQuizHistory({
+    required String categoryId,
+    required String categoryName,
+    required int score,
+    required int totalQuestions,
+    required int correctAnswers,
+    required int timeSpent,
+    required String difficulty,
+  }) async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+
+      await _supabase.from('quiz_history').insert({
+        'user_id': userId,
+        'category_id': categoryId,
+        'category_name': categoryName,
+        'score': score,
+        'total_questions': totalQuestions,
+        'correct_answers': correctAnswers,
+        'time_spent': timeSpent,
+        'difficulty': difficulty,
+        'completed_at': DateTime.now().toIso8601String(),
+      });
+
+      debugPrint('Quiz history saved successfully');
+    } catch (e) {
+      debugPrint('Error saving quiz history: $e');
+      rethrow;
     }
   }
 }
