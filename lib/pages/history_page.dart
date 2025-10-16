@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:aigrove/services/user_service.dart';
 import 'package:aigrove/services/profile_service.dart';
 import 'package:intl/intl.dart';
+import '../theme/app_theme.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -76,15 +77,18 @@ class _HistoryPageState extends State<HistoryPage>
           labelColor: Colors.white,
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadHistory,
-              child: TabBarView(
-                controller: _tabController,
-                children: [_buildScanHistory(), _buildQuizHistory()],
+      body: Container(
+        decoration: AppTheme.getPageGradient(context),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadHistory,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [_buildScanHistory(), _buildQuizHistory()],
+                ),
               ),
-            ),
+      ),
     );
   }
 
@@ -153,6 +157,7 @@ class _HistoryPageState extends State<HistoryPage>
               child: Image.network(
                 imageUrl,
                 fit: BoxFit.cover,
+                // ignore: unnecessary_underscores
                 errorBuilder: (_, __, ___) =>
                     const Icon(Icons.eco, color: Colors.green),
               ),
@@ -216,6 +221,7 @@ class _HistoryPageState extends State<HistoryPage>
                     child: Image.network(
                       scan['image_url'],
                       fit: BoxFit.cover,
+                      // ignore: unnecessary_underscores
                       errorBuilder: (_, __, ___) => Container(
                         height: 150,
                         color: Colors.grey.shade200,
