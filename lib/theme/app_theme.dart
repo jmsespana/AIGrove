@@ -320,4 +320,34 @@ class AppTheme {
   // Renamed for compatibility with the existing code
   static final ThemeData natureTheme = lightTheme;
   static final ThemeData natureDarkTheme = darkTheme;
+
+  // ============================================
+  // GRADIENT BACKGROUND DECORATIONS
+  // ============================================
+  
+  /// Gradient background para sa light mode
+  /// Gikan sa green[700] paingon sa green[50]
+  static BoxDecoration getGradientBackground({bool isDark = false}) {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: isDark
+            ? [
+                const Color(0xFF2E7D32), // darkGreen
+                const Color(0xFF1B5E20), // darker green
+              ]
+            : [
+                const Color(0xFF4CAF50), // primaryGreen
+                const Color(0xFFE8F5E9), // very light green
+              ],
+      ),
+    );
+  }
+
+  /// Alternative gradient - top to bottom fade
+  static BoxDecoration getPageGradient(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return getGradientBackground(isDark: isDark);
+  }
 }

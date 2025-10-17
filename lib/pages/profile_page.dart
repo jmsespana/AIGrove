@@ -3,6 +3,7 @@ import 'package:aigrove/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
 import 'dart:io';
 
 class ProfilePage extends StatefulWidget {
@@ -153,8 +154,10 @@ class _ProfilePageState extends State<ProfilePage> {
     return SafeArea(
       top: true, // I-add ang SafeArea sa top para dili ma-overlap sa status bar
       child: Scaffold(
-        body: Consumer<UserService>(
-          builder: (context, userService, child) {
+        body: Container(
+          decoration: AppTheme.getPageGradient(context),
+          child: Consumer<UserService>(
+            builder: (context, userService, child) {
             if (_isLoading) {
               return const Center(child: CircularProgressIndicator());
             }
@@ -439,6 +442,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             );
           },
+        ),
         ),
       ),
     );

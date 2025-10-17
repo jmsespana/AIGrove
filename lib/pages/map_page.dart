@@ -13,7 +13,9 @@ import '../models/map_models.dart';
 import '../widgets/map_widgets.dart';
 
 class MapPage extends StatefulWidget {
-  const MapPage({super.key});
+  final String? filterSpecies; // Optional: Filter to show only specific species
+  
+  const MapPage({super.key, this.filterSpecies});
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -212,7 +214,12 @@ class _MapPageState extends State<MapPage> {
 
     // Center the map on the Caraga region with appropriate zoom
     Future.delayed(const Duration(milliseconds: 500), () {
-      _fitMapToCaraga();
+      // If filterSpecies is provided, zoom to those locations
+      if (widget.filterSpecies != null) {
+        _focusOnSpecies(widget.filterSpecies!);
+      } else {
+        _fitMapToCaraga();
+      }
     });
   }
 
@@ -230,6 +237,65 @@ class _MapPageState extends State<MapPage> {
         padding: const EdgeInsets.all(50.0),
       ),
     );
+  }
+
+  // Focus map on specific species locations
+  void _focusOnSpecies(String speciesName) {
+    // Find all locations for this species
+    final speciesLocations = _mangroveLocations
+        .where((loc) => loc.species == speciesName)
+        .toList();
+    
+    if (speciesLocations.isEmpty) {
+      // No specific locations, just fit to Caraga
+      _fitMapToCaraga();
+      return;
+    }
+    
+    // Calculate bounds for all species locations
+    double minLat = speciesLocations.first.location.latitude;
+    double maxLat = speciesLocations.first.location.latitude;
+    double minLng = speciesLocations.first.location.longitude;
+    double maxLng = speciesLocations.first.location.longitude;
+    
+    for (var location in speciesLocations) {
+      if (location.location.latitude < minLat) minLat = location.location.latitude;
+      if (location.location.latitude > maxLat) maxLat = location.location.latitude;
+      if (location.location.longitude < minLng) minLng = location.location.longitude;
+      if (location.location.longitude > maxLng) maxLng = location.location.longitude;
+    }
+    
+    // Add padding to bounds
+    final padding = 0.5;
+    final bounds = LatLngBounds(
+      LatLng(minLat - padding, minLng - padding),
+      LatLng(maxLat + padding, maxLng + padding),
+    );
+    
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: bounds,
+        padding: const EdgeInsets.all(80.0),
+      ),
+    );
+    
+    // Show a message about the filtered species
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Showing locations for: $speciesName'),
+          backgroundColor: Colors.green[700],
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Show All',
+            textColor: Colors.white,
+            onPressed: () {
+              _fitMapToCaraga();
+            },
+          ),
+        ),
+      );
+    }
   }
 
   // Generate markers to visualize species distribution
@@ -484,11 +550,16 @@ class _MapPageState extends State<MapPage> {
   // Mag-add ng default na mangrove markers
   void _addDefaultMangroveMarkers() {
     for (var mangrove in _mangroveLocations) {
+      // Highlight kung filter species match
+      final isFiltered = widget.filterSpecies != null && 
+                         mangrove.species == widget.filterSpecies;
+      
       _addMangroveMarker(
         mangrove.location,
         mangrove.name,
         mangrove.species,
         mangrove.province,
+        isHighlighted: isFiltered,
       );
     }
   }
@@ -598,20 +669,22 @@ class _MapPageState extends State<MapPage> {
   void _addMangroveMarker(
     LatLng position,
     String name,
-    String species, [
-    String? province,
-  ]) {
+    String species,
+    String? province, {
+    bool isHighlighted = false,
+  }) {
     setState(() {
       _markers.add(
         Marker(
           point: position,
-          width: 110,
-          height: 90,
+          width: isHighlighted ? 130 : 110,
+          height: isHighlighted ? 110 : 90,
           child: MangroveMarker(
             position: position,
             name: name,
             species: species,
             speciesColor: _speciesColors[species] ?? Colors.green,
+            isHighlighted: isHighlighted,
             onTap: () => _showMangroveEditDialog(
               position,
               name,
@@ -894,6 +967,188 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
+  // Build indicator panel for scanned species
+  Widget _buildScannedSpeciesIndicator() {
+    final speciesLocations = _mangroveLocations
+        .where((loc) => loc.species == widget.filterSpecies)
+        .toList();
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.orange[700]!,
+            Colors.orange[500]!,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.location_on,
+                  color: Colors.orange[700],
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Scanned Species Locations',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.filterSpecies!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.my_location,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    speciesLocations.isEmpty
+                        ? 'No specific locations found in database'
+                        : '${speciesLocations.length} location${speciesLocations.length > 1 ? 's' : ''} found in Caraga',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Legend for highlighted markers
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.forest,
+                      color: Colors.orange[700],
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Orange markers',
+                      style: TextStyle(
+                        color: Colors.orange[700],
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.arrow_forward,
+                color: Colors.white,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Scanned species',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (speciesLocations.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Tap markers for details',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 10,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -905,6 +1160,7 @@ class _MapPageState extends State<MapPage> {
               initialCenter: _center,
               initialZoom: 8.0, // Lower zoom to show more of the region
               maxZoom: 18,
+              // ignore: unnecessary_underscores
               onTap: (_, __) {
                 // Hide any open tooltips or info windows when map is tapped
               },
@@ -1268,6 +1524,15 @@ class _MapPageState extends State<MapPage> {
               ),
             ),
           ),
+
+          // Scanned Species Indicator Panel
+          if (widget.filterSpecies != null)
+            Positioned(
+              bottom: 100,
+              left: 16,
+              right: 16,
+              child: _buildScannedSpeciesIndicator(),
+            ),
 
           // Info panel at bottom to show real-time data
           Positioned(

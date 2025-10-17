@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aigrove/services/profile_service.dart';
+import '../theme/app_theme.dart';
 import 'dart:async';
 
 class ChallengePage extends StatefulWidget {
@@ -61,8 +62,10 @@ class _ChallengePageState extends State<ChallengePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: CustomScrollView(
+      body: Container(
+        decoration: AppTheme.getPageGradient(context),
+        child: SafeArea(
+          child: CustomScrollView(
           slivers: [
             // App Bar with gradient background
             SliverAppBar(
@@ -130,6 +133,7 @@ class _ChallengePageState extends State<ChallengePage> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

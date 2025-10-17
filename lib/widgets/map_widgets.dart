@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -43,6 +45,7 @@ class MangroveMarker extends StatelessWidget {
   final String species;
   final Color speciesColor;
   final VoidCallback onTap;
+  final bool isHighlighted;
 
   const MangroveMarker({
     super.key,
@@ -51,6 +54,7 @@ class MangroveMarker extends StatelessWidget {
     required this.species,
     required this.speciesColor,
     required this.onTap,
+    this.isHighlighted = false,
   });
 
   @override
@@ -59,17 +63,50 @@ class MangroveMarker extends StatelessWidget {
       onTap: onTap,
       child: Column(
         children: [
-          Icon(Icons.forest, color: speciesColor, size: 35),
+          // Add pulsing effect for highlighted markers
+          if (isHighlighted)
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: speciesColor.withOpacity(0.3),
+              ),
+            ),
+          Transform.scale(
+            scale: isHighlighted ? 1.3 : 1.0,
+            child: Icon(
+              Icons.forest,
+              color: isHighlighted ? Colors.orange[700] : speciesColor,
+              size: 35,
+              shadows: isHighlighted
+                  ? [
+                      Shadow(
+                        blurRadius: 10,
+                        color: Colors.orange.withOpacity(0.8),
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
           Container(
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
-              // ignore: deprecated_member_use
-              color: Colors.white.withOpacity(0.7),
+              color: isHighlighted
+                  ? Colors.orange[700]
+                  : Colors.white.withOpacity(0.7),
               borderRadius: BorderRadius.circular(4),
+              border: isHighlighted
+                  ? Border.all(color: Colors.white, width: 2)
+                  : null,
             ),
             child: Text(
               name,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: isHighlighted ? 11 : 10,
+                fontWeight: isHighlighted ? FontWeight.bold : FontWeight.bold,
+                color: isHighlighted ? Colors.white : Colors.black,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
