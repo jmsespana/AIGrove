@@ -15,11 +15,45 @@ class ChallengePage extends StatefulWidget {
 
 class _ChallengePageState extends State<ChallengePage> {
   List<QuizCategory> _categories = [];
+  Set<String> _completedCategories = {}; // Track sa na-complete na categories
 
   @override
   void initState() {
     super.initState();
+    _loadCompletedCategories();
     _loadQuizCategories();
+  }
+
+  // I-load ang na-complete na categories gikan sa database
+  Future<void> _loadCompletedCategories() async {
+    try {
+      final profileService = context.read<ProfileService>();
+      final completed = await profileService.getCompletedCategories();
+      setState(() {
+        _completedCategories = completed;
+      });
+    } catch (e) {
+      debugPrint('Error loading completed categories: $e');
+    }
+  }
+
+  // Check kung unlocked ba ang category based sa difficulty progression
+  bool _isCategoryUnlocked(QuizCategory category) {
+    switch (category.difficulty) {
+      case QuizDifficulty.easy:
+        return true; // Easy is always unlocked
+      case QuizDifficulty.medium:
+        // Medium unlocked kun na-complete na ang easy
+        return _categories
+            .where((cat) => cat.difficulty == QuizDifficulty.easy)
+            .every((cat) => _completedCategories.contains(cat.id));
+      case QuizDifficulty.hard:
+        // Hard unlocked kun na-complete na ang easy ug medium
+        return _categories
+            .where((cat) => cat.difficulty == QuizDifficulty.easy || 
+                          cat.difficulty == QuizDifficulty.medium)
+            .every((cat) => _completedCategories.contains(cat.id));
+    }
   }
 
   // Load quiz categories - base sa mangrove data from map ug homepage
@@ -27,7 +61,7 @@ class _ChallengePageState extends State<ChallengePage> {
     setState(() {
       _categories = [
         QuizCategory(
-          id: '1',
+          id: 'easy_species',
           name: 'Mangrove Species',
           description:
               'Test your knowledge about different mangrove species found in Caraga region',
@@ -37,7 +71,7 @@ class _ChallengePageState extends State<ChallengePage> {
           questions: _getMangroveSpeciesQuestions(),
         ),
         QuizCategory(
-          id: '2',
+          id: 'medium_impact',
           name: 'Environmental Impact',
           description: 'Learn about the environmental benefits of mangroves',
           difficulty: QuizDifficulty.medium,
@@ -46,7 +80,7 @@ class _ChallengePageState extends State<ChallengePage> {
           questions: _getEnvironmentalImpactQuestions(),
         ),
         QuizCategory(
-          id: '3',
+          id: 'hard_conservation',
           name: 'Conservation Challenges',
           description:
               'Advanced topics about mangrove conservation and restoration',
@@ -61,184 +95,510 @@ class _ChallengePageState extends State<ChallengePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
       body: Container(
         decoration: AppTheme.getPageGradient(context),
         child: SafeArea(
           child: CustomScrollView(
-          slivers: [
-            // App Bar with gradient background
-            SliverAppBar(
-              expandedHeight: 50,
-              floating: false,
-              pinned: true,
-              backgroundColor: Colors.green.shade700,
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
-                title: const Text(
-                  'Quiz Challenges',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 25,
-                    fontWeight:
-                        FontWeight.bold, // I-add ang bold para mas standout
-                  ),
-                ),
-                background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.green.shade700, Colors.green.shade900],
+            slivers: [
+              // Improved App Bar with better design
+              SliverAppBar(
+                expandedHeight: 200,
+                floating: false,
+                pinned: true,
+                backgroundColor: Colors.green.shade700, // Mas visible ang background
+                flexibleSpace: FlexibleSpaceBar(
+                  centerTitle: false,
+                  titlePadding: const EdgeInsets.only(left: 20, bottom: 16, top: 8), // Gi-add ang top padding
+                  title: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 4), // Extra padding para balanced
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 40, // Fixed width para centered ang icon
+                          height: 40, // Fixed height para centered ang icon
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.25), // Mas visible ang background
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Center( // I-center ang icon
+                            child: const Icon(
+                              Icons.emoji_events,
+                              color: Colors.amber,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Quiz Challenges',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 26, // Gi-balik sa original size
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black45, // Mas dark ang shadow para mas visible
+                                blurRadius: 10,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Stack(
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.green.shade800,
+                          Colors.green.shade600,
+                          Colors.teal.shade600,
+                        ],
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Animated background pattern
+                        Positioned(
+                          right: -50,
+                          top: -30,
+                          child: Container(
+                            width: 200,
+                            height: 200,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.05),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: -30,
+                          bottom: -40,
+                          child: Container(
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.05),
+                            ),
+                          ),
+                        ),
+                        // Decorative icons
+                        Positioned(
+                          right: 20,
+                          top: 40,
+                          child: Icon(
+                            Icons.quiz,
+                            size: 60,
+                            color: Colors.white.withOpacity(0.1),
+                          ),
+                        ),
+                        Positioned(
+                          left: 30,
+                          bottom: 60,
+                          child: Icon(
+                            Icons.eco,
+                            size: 50,
+                            color: Colors.white.withOpacity(0.1),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+
+              // Info banner - updated message
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.amber.shade400,
+                        Colors.orange.shade400,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
                     children: [
-                      // Background decorations
-                      Positioned(
-                        right: -20,
-                        top: 20,
-                        child: Icon(
-                          Icons.quiz,
-                          size: 80,
-                          color: Colors.white.withOpacity(0.1),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.lock_open,
+                          color: Colors.white,
+                          size: 28,
                         ),
                       ),
-                      Positioned(
-                        left: -15,
-                        bottom: 10,
-                        child: Icon(
-                          Icons.eco,
-                          size: 60,
-                          color: Colors.white.withOpacity(0.1),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Progressive Learning!',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Complete each difficulty to unlock the next level',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ),
 
-            // Quiz Categories
-            SliverPadding(
-              padding: const EdgeInsets.all(16.0),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final category = _categories[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: _buildCategoryCard(category),
-                  );
-                }, childCount: _categories.length),
+              // Categories header
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade700,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Available Challenges',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.grey[800],
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.green.shade200,
+                          ),
+                        ),
+                        child: Text(
+                          '${_categories.length} Categories',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
+
+              // Quiz Categories - with lock/unlock status
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final category = _categories[index];
+                      final isUnlocked = _isCategoryUnlocked(category);
+                      final isCompleted = _completedCategories.contains(category.id);
+                      
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: _buildCategoryCard(category, isUnlocked, isCompleted),
+                      );
+                    },
+                    childCount: _categories.length,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCategoryCard(QuizCategory category) {
+  Widget _buildCategoryCard(QuizCategory category, bool isUnlocked, bool isCompleted) {
     String difficultyText = category.difficulty.name.toUpperCase();
     Color difficultyColor = _getDifficultyColor(category.difficulty);
 
     return Material(
-      elevation: 4,
-      borderRadius: BorderRadius.circular(16),
+      elevation: isUnlocked ? 8 : 2,
+      borderRadius: BorderRadius.circular(20),
+      shadowColor: category.color.withOpacity(isUnlocked ? 0.3 : 0.1),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _startQuiz(category),
+        borderRadius: BorderRadius.circular(20),
+        onTap: isUnlocked 
+          ? () => _startQuiz(category)
+          : () => _showLockedDialog(category),
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [category.color.withOpacity(0.8), category.color],
+              colors: isUnlocked
+                ? [
+                    category.color.withOpacity(0.9),
+                    category.color,
+                    category.color.withOpacity(0.8),
+                  ]
+                : [
+                    Colors.grey.shade400,
+                    Colors.grey.shade500,
+                    Colors.grey.shade400,
+                  ],
             ),
           ),
           child: Stack(
             children: [
               // Background pattern
               Positioned(
-                right: -10,
-                bottom: -10,
-                child: Icon(
-                  category.icon,
-                  size: 80,
-                  color: Colors.white.withOpacity(0.1),
+                right: -20,
+                bottom: -20,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.1),
+                  ),
                 ),
               ),
+              Positioned(
+                right: 10,
+                top: -10,
+                child: Icon(
+                  isUnlocked ? category.icon : Icons.lock,
+                  size: 100,
+                  color: Colors.white.withOpacity(0.15),
+                ),
+              ),
+
+              // Completed badge
+              if (isCompleted)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.check_circle, color: Colors.white, size: 16),
+                        SizedBox(width: 4),
+                        Text(
+                          'Completed',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
               // Content
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(category.icon, color: Colors.white, size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          category.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          isUnlocked ? category.icon : Icons.lock,
+                          color: Colors.white,
+                          size: 28,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: difficultyColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          difficultyText,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              category.name,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.3,
+                                decoration: isUnlocked ? null : TextDecoration.none,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: difficultyColor,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _getDifficultyIcon(category.difficulty),
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    difficultyText,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    category.description,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 14,
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isUnlocked 
+                        ? category.description
+                        : 'Complete previous difficulty to unlock',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.4,
+                        fontStyle: isUnlocked ? FontStyle.normal : FontStyle.italic,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Icon(
-                        Icons.quiz,
-                        color: Colors.white.withOpacity(0.8),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${category.questions.length} questions',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 12,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isUnlocked ? Icons.quiz : Icons.lock,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isUnlocked 
+                                ? '${category.questions.length} questions'
+                                : 'Locked',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const Spacer(),
-                      const Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.white,
-                        size: 16,
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          isUnlocked ? Icons.arrow_forward : Icons.lock,
+                          color: isUnlocked ? category.color : Colors.grey,
+                          size: 20,
+                        ),
                       ),
                     ],
                   ),
@@ -249,6 +609,87 @@ class _ChallengePageState extends State<ChallengePage> {
         ),
       ),
     );
+  }
+
+  // Show dialog kun nag-tap sa locked category
+  void _showLockedDialog(QuizCategory category) {
+    String requirement = '';
+    
+    switch (category.difficulty) {
+      case QuizDifficulty.medium:
+        requirement = 'Complete the Easy difficulty first to unlock this category.';
+        break;
+      case QuizDifficulty.hard:
+        requirement = 'Complete both Easy and Medium difficulties to unlock this category.';
+        break;
+      default:
+        requirement = '';
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.lock, color: Colors.orange.shade700),
+            const SizedBox(width: 12),
+            const Expanded(child: Text('Category Locked')),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              category.name,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(requirement),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Progressive learning helps you master mangrove knowledge step by step!',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getDifficultyIcon(QuizDifficulty difficulty) {
+    switch (difficulty) {
+      case QuizDifficulty.easy:
+        return Icons.trending_up;
+      case QuizDifficulty.medium:
+        return Icons.whatshot;
+      case QuizDifficulty.hard:
+        return Icons.local_fire_department;
+    }
   }
 
   Color _getDifficultyColor(QuizDifficulty difficulty) {
@@ -265,7 +706,15 @@ class _ChallengePageState extends State<ChallengePage> {
   void _startQuiz(QuizCategory category) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => QuizScreen(category: category)),
+      MaterialPageRoute(
+        builder: (context) => QuizScreen(
+          category: category,
+          onQuizCompleted: () {
+            // I-reload ang completed categories after finishing quiz
+            _loadCompletedCategories();
+          },
+        ),
+      ),
     );
   }
 
@@ -598,8 +1047,13 @@ class _ChallengePageState extends State<ChallengePage> {
 // Quiz Screen para sa actual quiz taking
 class QuizScreen extends StatefulWidget {
   final QuizCategory category;
+  final VoidCallback? onQuizCompleted; // Callback para i-notify ang parent
 
-  const QuizScreen({super.key, required this.category});
+  const QuizScreen({
+    super.key, 
+    required this.category,
+    this.onQuizCompleted,
+  });
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -610,11 +1064,11 @@ class _QuizScreenState extends State<QuizScreen> {
   int _score = 0;
   List<String> _selectedAnswers = [];
   Timer? _timer;
-  int _timeLeft = 30; // Fixed: ginhimo na int instead of final int
-  int _totalTimeSpent = 0; // Fixed: ginhimo na variable instead of final
+  int _timeLeft = 1200; // 20 minutes = 1200 seconds para sa whole quiz
+  int _totalTimeSpent = 0;
   bool _isAnswered = false;
-  List<String> _shuffledAnswers = []; // I-store ang shuffled answers
-  List<QuizQuestion> _shuffledQuestions = []; // Para ma-shuffle ang questions
+  List<String> _shuffledAnswers = [];
+  List<QuizQuestion> _shuffledQuestions = [];
 
   @override
   void initState() {
@@ -622,49 +1076,48 @@ class _QuizScreenState extends State<QuizScreen> {
     // I-shuffle ang questions kada start
     _shuffledQuestions = List.from(widget.category.questions)..shuffle();
     _selectedAnswers = List.filled(_shuffledQuestions.length, '');
-    _prepareAnswersForCurrentQuestion(); // I-prepare ang answers para sa first question
+    _prepareAnswersForCurrentQuestion();
     _startTimer();
   }
 
   void _startTimer() {
-    _timer?.cancel(); // Cancel any existing timer
-    _timeLeft = 30; // Reset timer to 30 seconds
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      
       setState(() {
         _timeLeft--;
         _totalTimeSpent++;
       });
 
+      // Kung naubos na ang time, auto-finish ang quiz
       if (_timeLeft <= 0) {
-        _nextQuestion();
+        _finishQuiz();
       }
     });
   }
 
   // I-prepare ang answers para sa current question (one time lang para dili mag-shuffle)
   void _prepareAnswersForCurrentQuestion() {
-    final question =
-        _shuffledQuestions[_currentQuestionIndex]; // Fixed: gamiton ang shuffled questions
+    final question = _shuffledQuestions[_currentQuestionIndex];
     _shuffledAnswers = [question.correctAnswer, ...question.wrongAnswers];
-    _shuffledAnswers.shuffle(); // Shuffle once lang
+    _shuffledAnswers.shuffle();
   }
 
   void _nextQuestion() {
-    _timer?.cancel();
+    // Wala na'y timer cancel kay continuous na ang timer
 
     if (_currentQuestionIndex < _shuffledQuestions.length - 1) {
       setState(() {
         _currentQuestionIndex++;
         _isAnswered = false;
       });
-      _prepareAnswersForCurrentQuestion(); // I-prepare ang new answers
-      _startTimer();
+      _prepareAnswersForCurrentQuestion();
+      // Wala na'y _startTimer() kay continuous na
     } else {
       _finishQuiz();
     }
   }
 
-  // I-update ang _finishQuiz method para ma-handle ang database errors
   void _finishQuiz() async {
     _timer?.cancel();
 
@@ -689,11 +1142,16 @@ class _QuizScreenState extends State<QuizScreen> {
         }
       }
 
+      // Check if passing (minimum 60% to unlock next level)
+      double percentage = (correctAnswers / _shuffledQuestions.length) * 100;
+      bool isPassing = percentage >= 60;
+
       // I-save sa database ang complete quiz results
       await Future.wait([
         profileService.addPoints(_score),
         profileService.addCompletedChallenge(),
-        // I-save ang detailed quiz history (need i-add ni nga method sa ProfileService)
+        if (isPassing)
+          profileService.markCategoryAsCompleted(widget.category.id), // I-mark as completed
         profileService.saveQuizHistory(
           categoryId: widget.category.id,
           categoryName: widget.category.name,
@@ -702,6 +1160,7 @@ class _QuizScreenState extends State<QuizScreen> {
           correctAnswers: correctAnswers,
           timeSpent: _totalTimeSpent,
           difficulty: widget.category.difficulty.name,
+          isPassing: isPassing,
         ),
       ]);
 
@@ -710,6 +1169,9 @@ class _QuizScreenState extends State<QuizScreen> {
       // I-close ang loading dialog
       if (!mounted) return;
       Navigator.pop(context);
+
+      // I-call ang callback para i-refresh ang parent
+      widget.onQuizCompleted?.call();
 
       // I-navigate sa results screen
       Navigator.pushReplacement(
@@ -722,6 +1184,7 @@ class _QuizScreenState extends State<QuizScreen> {
             timeSpent: _totalTimeSpent,
             selectedAnswers: _selectedAnswers,
             shuffledQuestions: _shuffledQuestions,
+            isPassing: isPassing,
           ),
         ),
       );
@@ -743,6 +1206,16 @@ class _QuizScreenState extends State<QuizScreen> {
         ),
       );
 
+      // Calculate kung passing ba
+      int correctAnswers = 0;
+      for (int i = 0; i < _shuffledQuestions.length; i++) {
+        if (_selectedAnswers[i] == _shuffledQuestions[i].correctAnswer) {
+          correctAnswers++;
+        }
+      }
+      double percentage = (correctAnswers / _shuffledQuestions.length) * 100;
+      bool isPassing = percentage >= 60;
+
       // I-proceed pa rin sa results
       Navigator.pushReplacement(
         context,
@@ -754,6 +1227,7 @@ class _QuizScreenState extends State<QuizScreen> {
             timeSpent: _totalTimeSpent,
             selectedAnswers: _selectedAnswers,
             shuffledQuestions: _shuffledQuestions,
+            isPassing: isPassing,
           ),
         ),
       );
@@ -770,7 +1244,6 @@ class _QuizScreenState extends State<QuizScreen> {
 
     // Check if correct
     if (answer == _shuffledQuestions[_currentQuestionIndex].correctAnswer) {
-      // Fixed: gamiton ang shuffled questions
       _score += _shuffledQuestions[_currentQuestionIndex].points;
     }
 
@@ -780,184 +1253,301 @@ class _QuizScreenState extends State<QuizScreen> {
     });
   }
 
+  // Helper method para format ang time display
+  String _formatTime(int seconds) {
+    int minutes = seconds ~/ 60;
+    int secs = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final question =
-        _shuffledQuestions[_currentQuestionIndex]; // Fixed: gamiton ang shuffled questions
+    final question = _shuffledQuestions[_currentQuestionIndex];
+    final isTimeRunningOut = _timeLeft <= 60; // Last 1 minute warning
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header with progress ug timer
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    widget.category.color,
-                    widget.category.color.withOpacity(0.8),
-                  ],
-                ),
+    return WillPopScope(
+      onWillPop: () async {
+        // I-confirm if gusto jud mu-quit
+        final shouldPop = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Quit Quiz?'),
+            content: const Text('Your progress will be lost. Are you sure?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
               ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Expanded(
-                        child: LinearProgressIndicator(
-                          value:
-                              (_currentQuestionIndex + 1) /
-                              _shuffledQuestions.length,
-                          backgroundColor: Colors.white.withOpacity(0.3),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Colors.white,
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Quit'),
+              ),
+            ],
+          ),
+        ) ?? false;
+        return shouldPop;
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Header with progress ug overall timer
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      widget.category.color,
+                      widget.category.color.withOpacity(0.8),
+                    ],
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () async {
+                            final shouldPop = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Quit Quiz?'),
+                                content: const Text(
+                                  'Your progress will be lost. Are you sure?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text('Quit'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (shouldPop == true && mounted) {
+                              // ignore: use_build_context_synchronously
+                              Navigator.pop(context);
+                            }
+                          },
+                        ),
+                        Expanded(
+                          child: LinearProgressIndicator(
+                            value: (_currentQuestionIndex + 1) /
+                                _shuffledQuestions.length,
+                            backgroundColor: Colors.white.withOpacity(0.3),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                        const SizedBox(width: 16),
+                        // Overall timer display
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isTimeRunningOut
+                                ? Colors.red.withOpacity(0.3)
+                                : Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isTimeRunningOut
+                                  ? Colors.red
+                                  : Colors.white.withOpacity(0.5),
+                              width: 2,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.timer,
+                                color: isTimeRunningOut
+                                    ? Colors.red
+                                    : Colors.white,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatTime(_timeLeft),
+                                style: TextStyle(
+                                  color: isTimeRunningOut
+                                      ? Colors.red
+                                      : Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Question ${_currentQuestionIndex + 1} of ${_shuffledQuestions.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
                         ),
-                        child: Text(
-                          '${_timeLeft}s',
+                        Text(
+                          'Score: $_score',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Time warning banner
+              if (isTimeRunningOut)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  color: Colors.red.shade100,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.warning, color: Colors.red.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Time is running out!',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${_currentQuestionIndex + 1} of ${_shuffledQuestions.length}',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
+                ),
 
-            // Question content
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      question.question,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+              // Question content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        question.question,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // Answer options - gamiton ang _shuffledAnswers
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: _shuffledAnswers.length,
-                        itemBuilder: (context, index) {
-                          final answer =
-                              _shuffledAnswers[index]; // Fixed: gamiton ang shuffled answers
-                          final isSelected =
-                              _selectedAnswers[_currentQuestionIndex] == answer;
-                          final isCorrect = answer == question.correctAnswer;
+                      // Answer options
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: _shuffledAnswers.length,
+                          itemBuilder: (context, index) {
+                            final answer = _shuffledAnswers[index];
+                            final isSelected =
+                                _selectedAnswers[_currentQuestionIndex] ==
+                                    answer;
+                            final isCorrect = answer == question.correctAnswer;
 
-                          Color? cardColor;
-                          if (_isAnswered) {
-                            if (isCorrect) {
-                              cardColor = Colors.green;
-                            } else if (isSelected && !isCorrect) {
-                              cardColor = Colors.red;
+                            Color? cardColor;
+                            if (_isAnswered) {
+                              if (isCorrect) {
+                                cardColor = Colors.green;
+                              } else if (isSelected && !isCorrect) {
+                                cardColor = Colors.red;
+                              }
                             }
-                          }
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Material(
-                              elevation: 2,
-                              borderRadius: BorderRadius.circular(12),
-                              child: InkWell(
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Material(
+                                elevation: 2,
                                 borderRadius: BorderRadius.circular(12),
-                                onTap: () => _selectAnswer(answer),
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    color: cardColor ?? Colors.white,
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? widget.category.color
-                                          : Colors.grey.shade300,
-                                      width: isSelected ? 2 : 1,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: () => _selectAnswer(answer),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: cardColor ?? Colors.white,
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? widget.category.color
+                                            : Colors.grey.shade300,
+                                        width: isSelected ? 2 : 1,
+                                      ),
                                     ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: cardColor != null
-                                                ? Colors.white
-                                                : Colors.grey.shade400,
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 24,
+                                          height: 24,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: cardColor != null
+                                                  ? Colors.white
+                                                  : Colors.grey.shade400,
+                                            ),
+                                            color: isSelected
+                                                ? (cardColor ??
+                                                      widget.category.color)
+                                                : Colors.transparent,
                                           ),
-                                          color: isSelected
-                                              ? (cardColor ??
-                                                    widget.category.color)
-                                              : Colors.transparent,
+                                          child: isSelected
+                                              ? const Icon(
+                                                  Icons.check,
+                                                  size: 16,
+                                                  color: Colors.white,
+                                                )
+                                              : null,
                                         ),
-                                        child: isSelected
-                                            ? const Icon(
-                                                Icons.check,
-                                                size: 16,
-                                                color: Colors.white,
-                                              )
-                                            : null,
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Text(
-                                          answer,
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: cardColor != null
-                                                ? Colors.white
-                                                : Colors.black87,
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Text(
+                                            answer,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: cardColor != null
+                                                  ? Colors.white
+                                                  : Colors.black87,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      )
+    );  
   }
 
   @override
@@ -974,8 +1564,8 @@ class QuizResultScreen extends StatelessWidget {
   final int totalQuestions;
   final int timeSpent;
   final List<String> selectedAnswers;
-  final List<QuizQuestion>
-  shuffledQuestions; // Para ma-access ang shuffled questions
+  final List<QuizQuestion> shuffledQuestions;
+  final bool isPassing;
 
   const QuizResultScreen({
     super.key,
@@ -985,15 +1575,12 @@ class QuizResultScreen extends StatelessWidget {
     required this.timeSpent,
     required this.selectedAnswers,
     required this.shuffledQuestions,
+    required this.isPassing,
   });
 
   @override
   Widget build(BuildContext context) {
-    int maxPossibleScore = shuffledQuestions.fold(
-      // Fixed: gamiton ang shuffled questions
-      0,
-      (sum, q) => sum + q.points,
-    );
+    int maxPossibleScore = shuffledQuestions.fold(0, (sum, q) => sum + q.points);
     double percentage = (score / maxPossibleScore) * 100;
 
     return Scaffold(
@@ -1012,7 +1599,10 @@ class QuizResultScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.popUntil(
+                      context,
+                      (route) => route.isFirst,
+                    ),
                   ),
                   const Expanded(
                     child: Text(
@@ -1025,7 +1615,7 @@ class QuizResultScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  const SizedBox(width: 48), // Balance ang spacing
+                  const SizedBox(width: 48),
                 ],
               ),
             ),
@@ -1078,6 +1668,61 @@ class QuizResultScreen extends StatelessWidget {
                             ),
                             textAlign: TextAlign.center,
                           ),
+                          
+                          // Unlock notification
+                          if (isPassing) ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.amber.shade700),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.lock_open, color: Colors.amber.shade700),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Congratulations! Next difficulty unlocked! 🎉',
+                                      style: TextStyle(
+                                        color: Colors.amber.shade900,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ] else ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.orange.shade700),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info_outline, color: Colors.orange.shade700),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Score 60% or higher to unlock the next level',
+                                      style: TextStyle(
+                                        color: Colors.orange.shade900,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

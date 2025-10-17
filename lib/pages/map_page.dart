@@ -155,6 +155,11 @@ class _MapPageState extends State<MapPage> {
   Timer? _distributionUpdateTimer;
   String _selectedProvince = 'All Provinces';
   String _selectedSpecies = 'All Species';
+  
+  // Bag-o nga state variables para sa hide/show
+  bool _showProvinceSelector = true;
+  bool _showLegend = true;
+  bool _showInfoPanel = true;
 
   // Environmental impact data (from the dashboard)
   final Map<String, EnvironmentalImpact> _environmentalImpactData = {
@@ -865,107 +870,7 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-  // Bagong method para sa pag-add ng custom mangrove location
-  void _addCustomMangroveLocation() async {
-    try {
-      final position = await Geolocator.getCurrentPosition();
-      final location = LatLng(position.latitude, position.longitude);
 
-      final nameController = TextEditingController(text: "New Mangrove Site");
-      final speciesController = TextEditingController(text: "Unknown Species");
-      String selectedProvince = _determineProvince(location) ?? 'Unknown';
-
-      if (!mounted) return;
-
-      await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Add New Mangrove Location'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Location Name'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: speciesController,
-                decoration: const InputDecoration(
-                  labelText: 'Mangrove Species',
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: selectedProvince,
-                decoration: const InputDecoration(
-                  labelText: 'Province',
-                  border: OutlineInputBorder(),
-                ),
-                items:
-                    [
-                      'Agusan del Norte',
-                      'Agusan del Sur',
-                      'Surigao del Norte',
-                      'Surigao del Sur',
-                      'Dinagat Islands',
-                      'Unknown',
-                    ].map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                onChanged: (value) {
-                  selectedProvince = value!;
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                _addMangroveMarker(
-                  location,
-                  nameController.text,
-                  speciesController.text,
-                  selectedProvince,
-                );
-
-                // Update species distribution data
-                if (selectedProvince != 'Unknown') {
-                  final species = speciesController.text;
-                  final currentCount =
-                      _speciesDistribution[selectedProvince]?[species] ?? 0;
-
-                  if (_speciesDistribution.containsKey(selectedProvince)) {
-                    _speciesDistribution[selectedProvince]?[species] =
-                        currentCount + 1;
-                  } else {
-                    _speciesDistribution[selectedProvince] = {species: 1};
-                  }
-
-                  if (_showDistribution) {
-                    _generateSpeciesDistributionMarkers();
-                  }
-                }
-
-                _mapController.move(location, 15);
-                Navigator.pop(context);
-              },
-              child: const Text('Add Location'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      debugPrint('Error creating custom mangrove location: $e');
-    }
-  }
 
   // Build indicator panel for scanned species
   Widget _buildScannedSpeciesIndicator() {
@@ -1158,7 +1063,7 @@ class _MapPageState extends State<MapPage> {
             mapController: _mapController,
             options: MapOptions(
               initialCenter: _center,
-              initialZoom: 8.0, // Lower zoom to show more of the region
+              initialZoom: 8.0,
               maxZoom: 18,
               // ignore: unnecessary_underscores
               onTap: (_, __) {
@@ -1170,379 +1075,22 @@ class _MapPageState extends State<MapPage> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.aigrove.app',
               ),
-              // Show distribution markers if enabled
               if (_showDistribution) MarkerLayer(markers: _distributionMarkers),
-              // Show environmental impact markers if enabled
               if (_showEnvironmentalImpact)
                 MarkerLayer(markers: _environmentalImpactMarkers),
-              // Show regular markers
               MarkerLayer(markers: _markers),
-              // I-add ang current location marker
               const CurrentLocationLayer(),
             ],
           ),
           if (_isLoading) const Center(child: CircularProgressIndicator()),
 
-          // Province selector
-          Positioned(
-            top: 10,
-            left: 10,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Caraga Region Mangroves',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButton<String>(
-                    value: _selectedProvince,
-                    isDense: true,
-                    underline: Container(height: 1, color: Colors.green),
-                    dropdownColor: Theme.of(context).scaffoldBackgroundColor,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                    items:
-                        <String>[
-                          'All Provinces',
-                          'Agusan del Norte',
-                          'Surigao del Norte',
-                          'Surigao del Sur',
-                          'Dinagat Islands',
-                        ].map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(
-                              value,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyMedium?.color,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedProvince = newValue!;
-
-                        // Update visualization if enabled
-                        if (_showDistribution) {
-                          _generateSpeciesDistributionMarkers();
-                        }
-
-                        // Move map to province if specific province selected
-                        if (_selectedProvince != 'All Provinces') {
-                          _mapController.move(
-                            _getProvinceCenterCoordinates(_selectedProvince),
-                            9.0,
-                          );
-                        } else {
-                          _fitMapToCaraga();
-                        }
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 4),
-                  DropdownButton<String>(
-                    value: _selectedSpecies,
-                    isDense: true,
-                    underline: Container(height: 1, color: Colors.green),
-                    dropdownColor: Theme.of(context).scaffoldBackgroundColor,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                    items:
-                        <String>[
-                          'All Species',
-                          ...{..._speciesColors.keys},
-                        ].map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(
-                              value,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyMedium?.color,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedSpecies = newValue!;
-
-                        // Update visualization if enabled
-                        if (_showDistribution) {
-                          _generateSpeciesDistributionMarkers();
-                        }
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Legend for mangroves
-          Positioned(
-            top: 10,
-            right: 10,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).scaffoldBackgroundColor.withOpacity(0.95),
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Mangrove Species',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.park,
-                        color: const Color(0xFF2E7D32),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Mangrove Location',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).textTheme.bodyMedium?.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_showDistribution) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Species Distribution',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    ..._speciesColors.entries.take(5).map((entry) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: entry.value,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              entry.key,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyMedium?.color,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                  const SizedBox(height: 8),
-                  // Toggle switch for distribution view
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _showDistribution = !_showDistribution;
-                        if (_showDistribution) {
-                          _generateSpeciesDistributionMarkers();
-                        }
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _showDistribution
-                            ? Colors.green
-                            : Colors.grey.shade600,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _showDistribution
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _showDistribution
-                                ? 'Hide Distribution'
-                                : 'Show Distribution',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Toggle switch for environmental impact view
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _showEnvironmentalImpact = !_showEnvironmentalImpact;
-                        if (_showEnvironmentalImpact) {
-                          _generateEnvironmentalImpactMarkers();
-                        }
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _showEnvironmentalImpact
-                            ? Colors.teal
-                            : Colors.grey.shade600,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _showEnvironmentalImpact
-                                ? Icons.eco
-                                : Icons.eco_outlined,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _showEnvironmentalImpact
-                                ? 'Hide Impact Data'
-                                : 'Show Impact Data',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Show environmental impact legend if enabled
-                  if (_showEnvironmentalImpact) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Environmental Impact',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    ..._environmentalImpactData.entries.map((entry) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Row(
-                          children: [
-                            Icon(
-                              entry.value.icon,
-                              color: entry.value.color,
-                              size: 12,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              entry.key,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyMedium?.color,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ],
-              ),
-            ),
-          ),
-
-          // Scanned Species Indicator Panel
-          if (widget.filterSpecies != null)
+          // Province selector - with hide/show
+          if (_showProvinceSelector)
             Positioned(
-              bottom: 100,
-              left: 16,
-              right: 16,
-              child: _buildScannedSpeciesIndicator(),
-            ),
-
-          // Info panel at bottom to show real-time data
-          Positioned(
-            bottom: 30,
-            left: 0,
-            right: 0,
-            child: Center(
+              top: 10,
+              left: 10,
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: Theme.of(context).scaffoldBackgroundColor,
                   borderRadius: BorderRadius.circular(8),
@@ -1556,83 +1104,496 @@ class _MapPageState extends State<MapPage> {
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.info_outline,
-                          size: 16,
-                          color: Colors.green,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Real-time Species Distribution',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(
-                              context,
-                            ).textTheme.bodyMedium?.color,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Caraga Region Mangroves',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      _selectedProvince == 'All Provinces'
-                          ? 'Viewing mangrove data across the Caraga Region'
-                          : 'Viewing mangrove data for $_selectedProvince',
+                    DropdownButton<String>(
+                      value: _selectedProvince,
+                      isDense: true,
+                      underline: Container(height: 1, color: Colors.green),
+                      dropdownColor: Theme.of(context).scaffoldBackgroundColor,
                       style: TextStyle(
                         fontSize: 12,
                         color: Theme.of(context).textTheme.bodyMedium?.color,
                       ),
+                      items:
+                          <String>[
+                            'All Provinces',
+                            'Agusan del Norte',
+                            'Surigao del Norte',
+                            'Surigao del Sur',
+                            'Dinagat Islands',
+                          ].map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(
+                                value,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedProvince = newValue!;
+
+                          // Update visualization if enabled
+                          if (_showDistribution) {
+                            _generateSpeciesDistributionMarkers();
+                          }
+
+                          // Move map to province if specific province selected
+                          if (_selectedProvince != 'All Provinces') {
+                            _mapController.move(
+                              _getProvinceCenterCoordinates(_selectedProvince),
+                              9.0,
+                            );
+                          } else {
+                            _fitMapToCaraga();
+                          }
+                        });
+                      },
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      _selectedSpecies == 'All Species'
-                          ? 'All mangrove species are displayed'
-                          : 'Filtered to show only $_selectedSpecies',
+                    DropdownButton<String>(
+                      value: _selectedSpecies,
+                      isDense: true,
+                      underline: Container(height: 1, color: Colors.green),
+                      dropdownColor: Theme.of(context).scaffoldBackgroundColor,
                       style: TextStyle(
                         fontSize: 12,
                         color: Theme.of(context).textTheme.bodyMedium?.color,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap on distribution indicators to view detailed species information',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontStyle: FontStyle.italic,
-                        color: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.color?.withOpacity(0.7),
-                      ),
+                      items:
+                          <String>[
+                            'All Species',
+                            ...{..._speciesColors.keys},
+                          ].map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(
+                                value,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedSpecies = newValue!;
+
+                          // Update visualization if enabled
+                          if (_showDistribution) {
+                            _generateSpeciesDistributionMarkers();
+                          }
+                        });
+                      },
                     ),
                   ],
                 ),
               ),
             ),
-          ),
+
+          // Legend for mangroves - with hide/show
+          if (_showLegend)
+            Positioned(
+              top: 10,
+              right: 10,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).scaffoldBackgroundColor.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Mangrove Species',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.park,
+                          color: const Color(0xFF2E7D32),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Mangrove Location',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_showDistribution) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Species Distribution',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ..._speciesColors.entries.take(5).map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: entry.value,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                entry.key,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                    const SizedBox(height: 8),
+                    // Toggle switch for distribution view
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _showDistribution = !_showDistribution;
+                          if (_showDistribution) {
+                            _generateSpeciesDistributionMarkers();
+                          }
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _showDistribution
+                              ? Colors.green
+                              : Colors.grey.shade600,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _showDistribution
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _showDistribution
+                                  ? 'Hide Distribution'
+                                  : 'Show Distribution',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    // Toggle switch for environmental impact view
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _showEnvironmentalImpact = !_showEnvironmentalImpact;
+                          if (_showEnvironmentalImpact) {
+                            _generateEnvironmentalImpactMarkers();
+                          }
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _showEnvironmentalImpact
+                              ? Colors.teal
+                              : Colors.grey.shade600,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _showEnvironmentalImpact
+                                  ? Icons.eco
+                                  : Icons.eco_outlined,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _showEnvironmentalImpact
+                                  ? 'Hide Impact Data'
+                                  : 'Show Impact Data',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Show environmental impact legend if enabled
+                    if (_showEnvironmentalImpact) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Environmental Impact',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ..._environmentalImpactData.entries.map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              Icon(
+                                entry.value.icon,
+                                color: entry.value.color,
+                                size: 12,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                entry.key,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+          // Scanned Species Indicator Panel
+          if (widget.filterSpecies != null)
+            Positioned(
+              bottom: 100,
+              left: 16,
+              right: 16,
+              child: _buildScannedSpeciesIndicator(),
+            ),
+
+          // Info panel at bottom - with hide/show
+          if (_showInfoPanel)
+            Positioned(
+              bottom: 30,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: Colors.green,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Real-time Species Distribution',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.color,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _selectedProvince == 'All Provinces'
+                            ? 'Viewing mangrove data across the Caraga Region'
+                            : 'Viewing mangrove data for $_selectedProvince',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _selectedSpecies == 'All Species'
+                            ? 'All mangrove species are displayed'
+                            : 'Filtered to show only $_selectedSpecies',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap on distribution indicators to view detailed species information',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          color: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // Toggle Province Selector
           FloatingActionButton(
-            onPressed: _addCustomMangroveLocation,
-            heroTag: 'addMangrove',
+            onPressed: () {
+              setState(() {
+                _showProvinceSelector = !_showProvinceSelector;
+              });
+            },
+            heroTag: 'toggleProvinceSelector',
             mini: true,
-            child: const Icon(Icons.add_location),
+            backgroundColor: _showProvinceSelector
+                ? Colors.green[700]
+                : Colors.grey[600],
+            tooltip: _showProvinceSelector
+                ? 'Hide Province Selector'
+                : 'Show Province Selector',
+            child: Icon(
+              _showProvinceSelector
+                  ? Icons.filter_list
+                  : Icons.filter_list_off,
+            ),
           ),
           const SizedBox(height: 10),
+          // Toggle Legend
+          FloatingActionButton(
+            onPressed: () {
+              setState(() {
+                _showLegend = !_showLegend;
+              });
+            },
+            heroTag: 'toggleLegend',
+            mini: true,
+            backgroundColor: _showLegend
+                ? Colors.green[700]
+                : Colors.grey[600],
+            tooltip: _showLegend ? 'Hide Legend' : 'Show Legend',
+            child: Icon(
+              _showLegend ? Icons.map : Icons.map_outlined,
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Toggle Info Panel
+          FloatingActionButton(
+            onPressed: () {
+              setState(() {
+                _showInfoPanel = !_showInfoPanel;
+              });
+            },
+            heroTag: 'toggleInfoPanel',
+            mini: true,
+            backgroundColor: _showInfoPanel
+                ? Colors.green[700]
+                : Colors.grey[600],
+            tooltip: _showInfoPanel
+                ? 'Hide Info Panel'
+                : 'Show Info Panel',
+            child: Icon(
+              _showInfoPanel ? Icons.info : Icons.info_outline,
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Fit to Caraga Region
           FloatingActionButton(
             onPressed: _fitMapToCaraga,
             heroTag: 'showRegion',
             mini: true,
             backgroundColor: Colors.amber,
+            tooltip: 'Fit to Caraga Region',
             child: const Icon(Icons.crop_free),
           ),
           const SizedBox(height: 10),
+          // My Location
           FloatingActionButton(
             onPressed: () async {
               final position = await Geolocator.getCurrentPosition();
@@ -1643,6 +1604,7 @@ class _MapPageState extends State<MapPage> {
               _mapController.move(userLocation, 15);
             },
             heroTag: 'myLocation',
+            tooltip: 'Go to My Location',
             child: const Icon(Icons.my_location),
           ),
         ],
