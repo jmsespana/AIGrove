@@ -8,9 +8,7 @@ plugins {
 android {
     namespace = "com.example.aigrove"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
     ndkVersion = "27.0.12077973"
-    compileSdk = flutter.compileSdkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -38,6 +36,24 @@ android {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
+    }
+    
+    // Para dili ma-compress ang .tflite files
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+        resources {
+            excludes += listOf("META-INF/LICENSE.md", "META-INF/NOTICE.md")
+            // Modern way to prevent compression of .tflite files
+            pickFirsts += listOf()
+            merges += listOf()
+        }
+    }
+    
+    // Use androidResources instead of deprecated aaptOptions
+    androidResources {
+        noCompress += listOf("tflite")
     }
 }
 
