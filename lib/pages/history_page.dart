@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:aigrove/services/user_service.dart';
 import 'package:aigrove/services/profile_service.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
 import '../theme/app_theme.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -114,147 +115,409 @@ class _HistoryPageState extends State<HistoryPage>
 
         return Card(
           elevation: 2,
-          margin: const EdgeInsets.symmetric(vertical: 8.0),
-          child: ListTile(
-            leading: _buildScanImage(scan['image_url']),
-            title: Text(
-              scan['species_name'],
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(formattedDate),
-                if (scan['notes'] != null &&
-                    scan['notes'].toString().isNotEmpty)
-                  Text(
-                    'Notes: ${scan['notes']}',
-                    style: const TextStyle(fontStyle: FontStyle.italic),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: InkWell(
             onTap: () => _showScanDetails(scan),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Photo thumbnail - MAS DAKO UG MAS NINDOT
+                  _buildScanThumbnail(scan['image_url']),
+                  const SizedBox(width: 12),
+
+                  // Content area
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Species name
+                        Text(
+                          scan['species_name'] ?? 'Unknown Species',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+
+                        // Date with icon
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              size: 14,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              formattedDate,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+
+                        // Location with icon (kung naa)
+                        if (scan['latitude'] != null &&
+                            scan['longitude'] != null)
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                size: 14,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  '${scan['latitude'].toStringAsFixed(4)}, ${scan['longitude'].toStringAsFixed(4)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                        // Notes preview (kung naa)
+                        if (scan['notes'] != null &&
+                            scan['notes'].toString().isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.notes,
+                                size: 14,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  scan['notes'],
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                    color: Colors.grey[600],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // Arrow icon
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.grey[400],
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildScanImage(String? imageUrl) {
+  /// BAG-O: Mas nindot nga thumbnail para sa scan photos
+  Widget _buildScanThumbnail(String? imageUrl) {
     return Container(
-      width: 50,
-      height: 50,
+      width: 90,
+      height: 90,
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            // ignore: deprecated_member_use
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: imageUrl != null
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                // ignore: unnecessary_underscores
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.eco, color: Colors.green),
-              ),
-            )
-          : const Icon(Icons.eco, color: Colors.green),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: imageUrl != null && imageUrl.isNotEmpty
+            ? _buildImage(imageUrl)
+            : _buildPlaceholder(),
+      ),
+    );
+  }
+
+  /// BAG-O: Image widget with proper error handling
+  Widget _buildImage(String imageUrl) {
+    // Kung file path gikan sa local storage
+    if (imageUrl.startsWith('/')) {
+      return Image.file(
+        File(imageUrl),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('Error loading local image: $error');
+          return _buildPlaceholder();
+        },
+      );
+    }
+
+    // Kung URL gikan sa network (Supabase storage)
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Center(
+          child: CircularProgressIndicator(
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                : null,
+            strokeWidth: 2,
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('Error loading network image: $error');
+        return _buildPlaceholder();
+      },
+    );
+  }
+
+  /// BAG-O: Placeholder para kung walay image
+  Widget _buildPlaceholder() {
+    return Container(
+      color: Colors.green.shade50,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.eco, size: 40, color: Colors.green.shade300),
+          const SizedBox(height: 4),
+          Text(
+            'No Photo',
+            style: TextStyle(fontSize: 10, color: Colors.green.shade300),
+          ),
+        ],
+      ),
     );
   }
 
   void _showScanDetails(Map<String, dynamic> scan) {
-    // Implementasyon sa pag-display sa detalye sa scan
+    final date = DateTime.parse(scan['created_at']);
+    final formattedDate = DateFormat('MMMM d, yyyy • h:mm a').format(date);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        final date = DateTime.parse(scan['created_at']);
-        final formattedDate = DateFormat('MMMM d, yyyy • h:mm a').format(date);
-
         return Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Species name header
-              Text(
-                scan['species_name'],
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Date
-              Row(
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.calendar_today, size: 16),
-                  const SizedBox(width: 8),
-                  Text(formattedDate),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Location
-              Row(
-                children: [
-                  const Icon(Icons.location_on, size: 16),
-                  const SizedBox(width: 8),
-                  Text('Lat: ${scan['latitude']}, Long: ${scan['longitude']}'),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Image if available
-              if (scan['image_url'] != null)
-                Center(
-                  child: Container(
-                    constraints: const BoxConstraints(maxHeight: 200),
-                    child: Image.network(
-                      scan['image_url'],
-                      fit: BoxFit.cover,
-                      // ignore: unnecessary_underscores
-                      errorBuilder: (_, __, ___) => Container(
-                        height: 150,
-                        color: Colors.grey.shade200,
-                        child: const Center(
-                          child: Icon(Icons.broken_image, size: 64),
-                        ),
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-                ),
-              const SizedBox(height: 16),
 
-              // Notes
-              Text('Notes:', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 4),
-              Text(
-                scan['notes'] ?? 'No notes added',
-                style: TextStyle(
-                  fontStyle: scan['notes'] == null
-                      ? FontStyle.italic
-                      : FontStyle.normal,
-                  color: scan['notes'] == null
-                      ? Colors.grey.shade600
-                      : Colors.black,
-                ),
+                  // BAG-O: Full-width image at the top
+                  if (scan['image_url'] != null && scan['image_url'].isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      height: 250,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            // ignore: deprecated_member_use
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: _buildImage(scan['image_url']),
+                      ),
+                    ),
+
+                  // Species name header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.forest,
+                          color: Colors.green.shade700,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          scan['species_name'] ?? 'Unknown Species',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Date
+                  _buildDetailRow(
+                    Icons.calendar_today,
+                    'Date & Time',
+                    formattedDate,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Location (kung naa)
+                  if (scan['latitude'] != null && scan['longitude'] != null)
+                    _buildDetailRow(
+                      Icons.location_on,
+                      'Location',
+                      '${scan['latitude'].toStringAsFixed(6)}, ${scan['longitude'].toStringAsFixed(6)}',
+                    ),
+                  const SizedBox(height: 12),
+
+                  // Notes section
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(Icons.notes, color: Colors.grey[700], size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Notes',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      scan['notes']?.toString().isNotEmpty == true
+                          ? scan['notes']
+                          : 'No notes added',
+                      style: TextStyle(
+                        fontStyle: scan['notes']?.toString().isEmpty ?? true
+                            ? FontStyle.italic
+                            : FontStyle.normal,
+                        color: scan['notes']?.toString().isEmpty ?? true
+                            ? Colors.grey[600]
+                            : Colors.black87,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Close button na lang (gi-tangtang ang View Location button)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Close'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Colors.green.shade700,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
     );
   }
 
+  /// BAG-O: Helper widget para sa detail rows
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: Colors.green.shade700, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ...existing code para sa quiz history...
   Widget _buildQuizHistory() {
     if (_quizHistory.isEmpty) {
       return _buildEmptyState(
