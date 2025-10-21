@@ -50,8 +50,11 @@ class _ChallengePageState extends State<ChallengePage> {
       case QuizDifficulty.hard:
         // Hard unlocked kun na-complete na ang easy ug medium
         return _categories
-            .where((cat) => cat.difficulty == QuizDifficulty.easy || 
-                          cat.difficulty == QuizDifficulty.medium)
+            .where(
+              (cat) =>
+                  cat.difficulty == QuizDifficulty.easy ||
+                  cat.difficulty == QuizDifficulty.medium,
+            )
             .every((cat) => _completedCategories.contains(cat.id));
     }
   }
@@ -96,7 +99,7 @@ class _ChallengePageState extends State<ChallengePage> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       body: Container(
         decoration: AppTheme.getPageGradient(context),
@@ -108,12 +111,19 @@ class _ChallengePageState extends State<ChallengePage> {
                 expandedHeight: 200,
                 floating: false,
                 pinned: true,
-                backgroundColor: Colors.green.shade700, // Mas visible ang background
+                backgroundColor:
+                    Colors.green.shade700, // Mas visible ang background
                 flexibleSpace: FlexibleSpaceBar(
                   centerTitle: false,
-                  titlePadding: const EdgeInsets.only(left: 20, bottom: 16, top: 8), // Gi-add ang top padding
+                  titlePadding: const EdgeInsets.only(
+                    left: 20,
+                    bottom: 16,
+                    top: 8,
+                  ), // Gi-add ang top padding
                   title: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 4), // Extra padding para balanced
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 4,
+                    ), // Extra padding para balanced
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -122,7 +132,9 @@ class _ChallengePageState extends State<ChallengePage> {
                           height: 40, // Fixed height para centered ang icon
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.25), // Mas visible ang background
+                            color: Colors.white.withOpacity(
+                              0.25,
+                            ), // Mas visible ang background
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
@@ -132,7 +144,8 @@ class _ChallengePageState extends State<ChallengePage> {
                               ),
                             ],
                           ),
-                          child: Center( // I-center ang icon
+                          child: Center(
+                            // I-center ang icon
                             child: const Icon(
                               Icons.emoji_events,
                               color: Colors.amber,
@@ -150,7 +163,8 @@ class _ChallengePageState extends State<ChallengePage> {
                             letterSpacing: 0.5,
                             shadows: [
                               Shadow(
-                                color: Colors.black45, // Mas dark ang shadow para mas visible
+                                color: Colors
+                                    .black45, // Mas dark ang shadow para mas visible
                                 blurRadius: 10,
                                 offset: Offset(0, 2),
                               ),
@@ -224,7 +238,6 @@ class _ChallengePageState extends State<ChallengePage> {
                 ),
               ),
 
-
               // Info banner - updated message
               SliverToBoxAdapter(
                 child: Container(
@@ -232,10 +245,7 @@ class _ChallengePageState extends State<ChallengePage> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        Colors.amber.shade400,
-                        Colors.orange.shade400,
-                      ],
+                      colors: [Colors.amber.shade400, Colors.orange.shade400],
                     ),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
@@ -321,9 +331,7 @@ class _ChallengePageState extends State<ChallengePage> {
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.green.shade200,
-                          ),
+                          border: Border.all(color: Colors.green.shade200),
                         ),
                         child: Text(
                           '${_categories.length} Categories',
@@ -343,19 +351,22 @@ class _ChallengePageState extends State<ChallengePage> {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final category = _categories[index];
-                      final isUnlocked = _isCategoryUnlocked(category);
-                      final isCompleted = _completedCategories.contains(category.id);
-                      
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: _buildCategoryCard(category, isUnlocked, isCompleted),
-                      );
-                    },
-                    childCount: _categories.length,
-                  ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final category = _categories[index];
+                    final isUnlocked = _isCategoryUnlocked(category);
+                    final isCompleted = _completedCategories.contains(
+                      category.id,
+                    );
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: _buildCategoryCard(
+                        category,
+                        isUnlocked,
+                        isCompleted,
+                      ),
+                    );
+                  }, childCount: _categories.length),
                 ),
               ),
             ],
@@ -365,7 +376,11 @@ class _ChallengePageState extends State<ChallengePage> {
     );
   }
 
-  Widget _buildCategoryCard(QuizCategory category, bool isUnlocked, bool isCompleted) {
+  Widget _buildCategoryCard(
+    QuizCategory category,
+    bool isUnlocked,
+    bool isCompleted,
+  ) {
     String difficultyText = category.difficulty.name.toUpperCase();
     Color difficultyColor = _getDifficultyColor(category.difficulty);
 
@@ -375,9 +390,9 @@ class _ChallengePageState extends State<ChallengePage> {
       shadowColor: category.color.withOpacity(isUnlocked ? 0.3 : 0.1),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: isUnlocked 
-          ? () => _startQuiz(category)
-          : () => _showLockedDialog(category),
+        onTap: isUnlocked
+            ? () => _startQuiz(category)
+            : () => _showLockedDialog(category),
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -386,16 +401,16 @@ class _ChallengePageState extends State<ChallengePage> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: isUnlocked
-                ? [
-                    category.color.withOpacity(0.9),
-                    category.color,
-                    category.color.withOpacity(0.8),
-                  ]
-                : [
-                    Colors.grey.shade400,
-                    Colors.grey.shade500,
-                    Colors.grey.shade400,
-                  ],
+                  ? [
+                      category.color.withOpacity(0.9),
+                      category.color,
+                      category.color.withOpacity(0.8),
+                    ]
+                  : [
+                      Colors.grey.shade400,
+                      Colors.grey.shade500,
+                      Colors.grey.shade400,
+                    ],
             ),
           ),
           child: Stack(
@@ -429,7 +444,10 @@ class _ChallengePageState extends State<ChallengePage> {
                   top: 0,
                   right: 0,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.amber,
                       borderRadius: BorderRadius.circular(12),
@@ -483,7 +501,9 @@ class _ChallengePageState extends State<ChallengePage> {
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.3,
-                                decoration: isUnlocked ? null : TextDecoration.none,
+                                decoration: isUnlocked
+                                    ? null
+                                    : TextDecoration.none,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -536,14 +556,16 @@ class _ChallengePageState extends State<ChallengePage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      isUnlocked 
-                        ? category.description
-                        : 'Complete previous difficulty to unlock',
+                      isUnlocked
+                          ? category.description
+                          : 'Complete previous difficulty to unlock',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 14,
                         height: 1.4,
-                        fontStyle: isUnlocked ? FontStyle.normal : FontStyle.italic,
+                        fontStyle: isUnlocked
+                            ? FontStyle.normal
+                            : FontStyle.italic,
                       ),
                     ),
                   ),
@@ -568,9 +590,9 @@ class _ChallengePageState extends State<ChallengePage> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              isUnlocked 
-                                ? '${category.questions.length} questions'
-                                : 'Locked',
+                              isUnlocked
+                                  ? '${category.questions.length} questions'
+                                  : 'Locked',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
@@ -614,13 +636,15 @@ class _ChallengePageState extends State<ChallengePage> {
   // Show dialog kun nag-tap sa locked category
   void _showLockedDialog(QuizCategory category) {
     String requirement = '';
-    
+
     switch (category.difficulty) {
       case QuizDifficulty.medium:
-        requirement = 'Complete the Easy difficulty first to unlock this category.';
+        requirement =
+            'Complete the Easy difficulty first to unlock this category.';
         break;
       case QuizDifficulty.hard:
-        requirement = 'Complete both Easy and Medium difficulties to unlock this category.';
+        requirement =
+            'Complete both Easy and Medium difficulties to unlock this category.';
         break;
       default:
         requirement = '';
@@ -642,10 +666,7 @@ class _ChallengePageState extends State<ChallengePage> {
           children: [
             Text(
               category.name,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
             Text(requirement),
@@ -658,7 +679,11 @@ class _ChallengePageState extends State<ChallengePage> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.blue.shade700,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
@@ -1049,11 +1074,7 @@ class QuizScreen extends StatefulWidget {
   final QuizCategory category;
   final VoidCallback? onQuizCompleted; // Callback para i-notify ang parent
 
-  const QuizScreen({
-    super.key, 
-    required this.category,
-    this.onQuizCompleted,
-  });
+  const QuizScreen({super.key, required this.category, this.onQuizCompleted});
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -1083,7 +1104,7 @@ class _QuizScreenState extends State<QuizScreen> {
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
-      
+
       setState(() {
         _timeLeft--;
         _totalTimeSpent++;
@@ -1134,7 +1155,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
       debugPrint('Nag-finish og quiz, score: $_score');
 
-      // Calculate results
+      // Calculate results - FIXED: base sa number of correct answers
       int correctAnswers = 0;
       for (int i = 0; i < _shuffledQuestions.length; i++) {
         if (_selectedAnswers[i] == _shuffledQuestions[i].correctAnswer) {
@@ -1143,6 +1164,7 @@ class _QuizScreenState extends State<QuizScreen> {
       }
 
       // Check if passing (minimum 60% to unlock next level)
+      // FIXED: percentage base sa number of questions, dili sa points
       double percentage = (correctAnswers / _shuffledQuestions.length) * 100;
       bool isPassing = percentage >= 60;
 
@@ -1151,7 +1173,7 @@ class _QuizScreenState extends State<QuizScreen> {
         profileService.addPoints(_score),
         profileService.addCompletedChallenge(),
         if (isPassing)
-          profileService.markCategoryAsCompleted(widget.category.id), // I-mark as completed
+          profileService.markCategoryAsCompleted(widget.category.id),
         profileService.saveQuizHistory(
           categoryId: widget.category.id,
           categoryName: widget.category.name,
@@ -1268,23 +1290,27 @@ class _QuizScreenState extends State<QuizScreen> {
     return WillPopScope(
       onWillPop: () async {
         // I-confirm if gusto jud mu-quit
-        final shouldPop = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Quit Quiz?'),
-            content: const Text('Your progress will be lost. Are you sure?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
+        final shouldPop =
+            await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Quit Quiz?'),
+                content: const Text(
+                  'Your progress will be lost. Are you sure?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Quit'),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Quit'),
-              ),
-            ],
-          ),
-        ) ?? false;
+            ) ??
+            false;
         return shouldPop;
       },
       child: Scaffold(
@@ -1338,7 +1364,8 @@ class _QuizScreenState extends State<QuizScreen> {
                         ),
                         Expanded(
                           child: LinearProgressIndicator(
-                            value: (_currentQuestionIndex + 1) /
+                            value:
+                                (_currentQuestionIndex + 1) /
                                 _shuffledQuestions.length,
                             backgroundColor: Colors.white.withOpacity(0.3),
                             valueColor: const AlwaysStoppedAnimation<Color>(
@@ -1461,7 +1488,7 @@ class _QuizScreenState extends State<QuizScreen> {
                             final answer = _shuffledAnswers[index];
                             final isSelected =
                                 _selectedAnswers[_currentQuestionIndex] ==
-                                    answer;
+                                answer;
                             final isCorrect = answer == question.correctAnswer;
 
                             Color? cardColor;
@@ -1546,8 +1573,8 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
           ),
         ),
-      )
-    );  
+      ),
+    );
   }
 
   @override
@@ -1580,8 +1607,16 @@ class QuizResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    int maxPossibleScore = shuffledQuestions.fold(0, (sum, q) => sum + q.points);
-    double percentage = (score / maxPossibleScore) * 100;
+    // FIXED: Calculate correct answers from selected answers
+    int correctAnswers = 0;
+    for (int i = 0; i < totalQuestions; i++) {
+      if (selectedAnswers[i] == shuffledQuestions[i].correctAnswer) {
+        correctAnswers++;
+      }
+    }
+
+    // FIXED: Percentage base sa number of correct answers, max is 100%
+    double percentage = (correctAnswers / totalQuestions) * 100;
 
     return Scaffold(
       body: SafeArea(
@@ -1599,10 +1634,8 @@ class QuizResultScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.popUntil(
-                      context,
-                      (route) => route.isFirst,
-                    ),
+                    onPressed: () =>
+                        Navigator.popUntil(context, (route) => route.isFirst),
                   ),
                   const Expanded(
                     child: Text(
@@ -1644,8 +1677,9 @@ class QuizResultScreen extends StatelessWidget {
                             color: category.color,
                           ),
                           const SizedBox(height: 16),
+                          // FIXED: Show correct answers out of total questions
                           Text(
-                            '$score / $maxPossibleScore',
+                            '$correctAnswers / $totalQuestions',
                             style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
@@ -1668,7 +1702,7 @@ class QuizResultScreen extends StatelessWidget {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          
+
                           // Unlock notification
                           if (isPassing) ...[
                             const SizedBox(height: 16),
@@ -1677,12 +1711,17 @@ class QuizResultScreen extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: Colors.amber.shade100,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.amber.shade700),
+                                border: Border.all(
+                                  color: Colors.amber.shade700,
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.lock_open, color: Colors.amber.shade700),
+                                  Icon(
+                                    Icons.lock_open,
+                                    color: Colors.amber.shade700,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -1704,11 +1743,16 @@ class QuizResultScreen extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: Colors.orange.shade100,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.orange.shade700),
+                                border: Border.all(
+                                  color: Colors.orange.shade700,
+                                ),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.info_outline, color: Colors.orange.shade700),
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: Colors.orange.shade700,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
