@@ -17,8 +17,9 @@ class UserService extends ChangeNotifier {
   String _userRole = 'user';
   bool _isAuthenticated = false;
   String? _bio;
+  List<Map<String, dynamic>> _userScans = [];
 
-  // Getters remain the same
+  // Getters
   String get userName => _userName;
   String get userEmail => _userEmail;
   File? get avatarImage => _avatarImage;
@@ -27,8 +28,9 @@ class UserService extends ChangeNotifier {
   String get userRole => _userRole;
   bool get isAuthenticated => _isAuthenticated;
   String? get bio => _bio;
+  List<Map<String, dynamic>> get userScans => _userScans;
 
-  // Add login method
+  // Login method
   Future<void> login(String email, String password) async {
     try {
       final response = await _supabase.auth.signInWithPassword(
@@ -42,7 +44,7 @@ class UserService extends ChangeNotifier {
 
         if (_userId == null) throw Exception('User ID is null');
 
-        // Check if profile exists
+        // Check kung naa bay profile
         final profile = await _supabase
             .from('profiles')
             .select()
@@ -50,7 +52,7 @@ class UserService extends ChangeNotifier {
             .maybeSingle();
 
         if (profile == null) {
-          // Create initial profile
+          // I-create ang initial profile kung wala pa
           await _supabase.from('profiles').upsert({
             'id': _userId,
             'email': email,
@@ -61,6 +63,7 @@ class UserService extends ChangeNotifier {
         }
 
         await loadUserProfile();
+        await loadUserScans();
         notifyListeners();
       } else {
         throw Exception('Login failed');
@@ -71,22 +74,21 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // Enhanced initialize method to ensure session persistence
+  // Initialize method para sa session persistence
   Future<bool> initialize() async {
     try {
-      // Check if there's an existing session
       final Session? session = _supabase.auth.currentSession;
       _isAuthenticated = session != null;
       _userId = session?.user.id;
 
       if (_isAuthenticated && _userId != null) {
         await loadUserProfile();
+        await loadUserScans();
         debugPrint('User session restored: $_userName');
       } else {
         debugPrint('No active session found');
       }
 
-      // Listen to auth state changes
       _supabase.auth.onAuthStateChange.listen((data) async {
         final Session? session = data.session;
         _isAuthenticated = session != null;
@@ -94,6 +96,7 @@ class UserService extends ChangeNotifier {
 
         if (_isAuthenticated && _userId != null) {
           await loadUserProfile();
+          await loadUserScans();
           debugPrint('Auth state changed: User logged in');
         } else {
           _clear();
@@ -109,44 +112,15 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // Check if user is authenticated without reloading profile
   bool checkAuthenticated() {
     return _supabase.auth.currentSession != null;
   }
 
-  // Initialize auth state
-  Future<void> initializeOld() async {
-    // Check if there's an existing session
-    final Session? session = _supabase.auth.currentSession;
-    _isAuthenticated = session != null;
-    _userId = session?.user.id;
-
-    if (_isAuthenticated) {
-      await loadUserProfile();
-    }
-
-    // Listen to auth state changes
-    _supabase.auth.onAuthStateChange.listen((data) async {
-      final Session? session = data.session;
-      _isAuthenticated = session != null;
-      _userId = session?.user.id;
-
-      if (_isAuthenticated) {
-        await loadUserProfile();
-      } else {
-        _clear();
-      }
-      notifyListeners();
-    });
-  }
-
-  // Enhanced load user profile
   Future<void> loadUserProfile() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) return;
 
-      // Check if profile exists
       final profile = await _supabase
           .from('profiles')
           .select()
@@ -154,7 +128,6 @@ class UserService extends ChangeNotifier {
           .maybeSingle();
 
       if (profile == null) {
-        // Create profile if it doesn't exist
         await _supabase.from('profiles').insert({
           'id': user.id,
           'email': user.email,
@@ -164,7 +137,6 @@ class UserService extends ChangeNotifier {
           'updated_at': DateTime.now().toIso8601String(),
         });
 
-        // Fetch the newly created profile
         final newProfile = await _supabase
             .from('profiles')
             .select()
@@ -183,7 +155,6 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // Helper method to update profile data
   void _updateProfileData(Map<String, dynamic> profile) {
     _userName = '${profile['first_name'] ?? ''} ${profile['last_name'] ?? ''}'
         .trim();
@@ -192,7 +163,6 @@ class UserService extends ChangeNotifier {
     _bio = profile['bio'];
   }
 
-  // Update profile method
   Future<void> updateProfile({
     String? firstName,
     String? lastName,
@@ -218,25 +188,19 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // Update avatar method
   Future<void> updateAvatar(File image) async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) return;
 
-      // Debug: Print user info
-      debugPrint("Updating avatar for user: ${user.id}");
+      debugPrint("Nag-update sa avatar para sa user: ${user.id}");
 
-      // Generate SIMPLER filename - walay special characters
       final fileExt = image.path.split('.').last;
-      // Simplified filename format
       final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
       final fileName = 'avatar_${user.id.substring(0, 8)}_$timestamp.$fileExt';
 
-      // Debug: Print filename
       debugPrint("Generated filename: $fileName");
 
-      // Upload file to Supabase Storage
       await _supabase.storage
           .from('avatars')
           .upload(
@@ -245,38 +209,32 @@ class UserService extends ChangeNotifier {
             fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
           );
 
-      // Get public URL
       final String imageUrl = _supabase.storage
           .from('avatars')
           .getPublicUrl(fileName);
 
-      // Debug: Print URL
       debugPrint("Generated image URL: $imageUrl");
 
-      // Update profile in database
       await _supabase
           .from('profiles')
           .update({'avatar_url': imageUrl})
           .eq('id', user.id);
 
-      // Update local state
       _avatarUrl = imageUrl;
       _avatarImage = image;
 
       notifyListeners();
     } catch (e) {
-      debugPrint("Error updating avatar: $e");
+      debugPrint("Error sa pag-update sa avatar: $e");
       rethrow;
     }
   }
 
-  // Add sign out method
   Future<void> signOut() async {
     await _supabase.auth.signOut();
     _clear();
   }
 
-  // Clear user data
   void _clear() {
     _userId = null;
     _userName = '';
@@ -286,10 +244,10 @@ class UserService extends ChangeNotifier {
     _userRole = 'user';
     _isAuthenticated = false;
     _bio = null;
+    _userScans = [];
     notifyListeners();
   }
 
-  // Add this method
   Future<void> updateBio(String newBio) async {
     try {
       final user = _supabase.auth.currentUser;
@@ -306,71 +264,108 @@ class UserService extends ChangeNotifier {
       _bio = newBio;
       notifyListeners();
     } catch (e) {
-      debugPrint('Error updating bio: $e');
+      debugPrint('Error sa pag-update sa bio: $e');
       rethrow;
     }
   }
 
-  // Add these properties
-  List<Map<String, dynamic>> _userScans = [];
-  List<Map<String, dynamic>> get userScans => _userScans;
+  // ========== SCAN METHODS ==========
 
-  // Add method to load user's scans
-  Future<void> loadUserScans() async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) return;
-
-      final scans = await _supabase
-          .from('scans')
-          .select('''
-            *,
-            profiles (
-              first_name,
-              last_name,
-              avatar_url
-            )
-          ''')
-          .eq('user_id', user.id)
-          .order('created_at', ascending: false);
-
-      _userScans = List<Map<String, dynamic>>.from(scans);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading scans: $e');
-      rethrow;
-    }
-  }
-
-  // Add method to create new scan
-  Future<void> createScan({
+  /// I-save ang scan result sa database
+  Future<void> saveScan({
     required String speciesName,
-    required double latitude,
-    required double longitude,
     String? imageUrl,
+    double? latitude,
+    double? longitude,
     String? notes,
   }) async {
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        throw Exception('User wala naka-login');
+      }
 
-      await _supabase.from('scans').insert({
+      debugPrint('🔍 === SAVING SCAN ===');
+      debugPrint('🔍 User ID: ${user.id}');
+      debugPrint('🔍 Species: $speciesName');
+      debugPrint('🔍 Image URL: $imageUrl');
+
+      // I-insert ang scan data
+      // Kung wala latitude/longitude, gamit default values (0.0) or remove the fields
+      final scanData = {
         'user_id': user.id,
         'species_name': speciesName,
-        'latitude': latitude,
-        'longitude': longitude,
         'image_url': imageUrl,
-        'notes': notes,
-      });
+        // I-include lang kung naa value, otherwise skip
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        if (notes != null) 'notes': notes,
+      };
 
-      await loadUserScans(); // Reload scans after creating new one
-    } catch (e) {
-      debugPrint('Error creating scan: $e');
+      debugPrint('🔍 Scan data: $scanData');
+
+      final result = await _supabase
+          .from('scans')
+          .insert(scanData)
+          .select()
+          .single();
+
+      debugPrint('✅ Insert successful: $result');
+
+      // I-reload ang scans
+      await loadUserScans();
+
+      debugPrint('✅ Scan na-save successfully: $speciesName');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error sa pag-save sa scan: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
       rethrow;
     }
   }
 
-  // Add method to update scan
+  /// I-load ang user's scan history
+  Future<void> loadUserScans() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        debugPrint('⚠️ Wala naka-login ang user');
+        _userScans = [];
+        notifyListeners();
+        return;
+      }
+
+      debugPrint('🔍 === LOADING SCANS ===');
+      debugPrint('🔍 User ID: ${user.id}');
+
+      // Query: user_id sa scans naka-FK sa profiles.id
+      final response = await _supabase
+          .from('scans')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+
+      debugPrint('🔍 Query response type: ${response.runtimeType}');
+      debugPrint('🔍 Query response: $response');
+
+      _userScans = List<Map<String, dynamic>>.from(response);
+      debugPrint('✅ Na-load ang ${_userScans.length} scans');
+
+      if (_userScans.isNotEmpty) {
+        debugPrint('🔍 First scan: ${_userScans.first}');
+      } else {
+        debugPrint('⚠️ Walay scans na-load pero wala error');
+      }
+
+      notifyListeners();
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error sa pag-load sa scans: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
+      _userScans = [];
+      notifyListeners();
+    }
+  }
+
+  /// I-update ang scan
   Future<void> updateScan({
     required String scanId,
     String? speciesName,
@@ -383,19 +378,19 @@ class UserService extends ChangeNotifier {
       final updates = {
         if (speciesName != null) 'species_name': speciesName,
         if (notes != null) 'notes': notes,
-        'updated_at': DateTime.now().toIso8601String(),
       };
 
       await _supabase.from('scans').update(updates).eq('id', scanId);
 
-      await loadUserScans(); // Reload scans after update
+      await loadUserScans();
+      debugPrint('✅ Scan na-update successfully');
     } catch (e) {
-      debugPrint('Error updating scan: $e');
+      debugPrint('❌ Error sa pag-update sa scan: $e');
       rethrow;
     }
   }
 
-  // Add method to delete scan
+  /// I-delete ang scan
   Future<void> deleteScan(String scanId) async {
     try {
       final user = _supabase.auth.currentUser;
@@ -403,9 +398,10 @@ class UserService extends ChangeNotifier {
 
       await _supabase.from('scans').delete().eq('id', scanId);
 
-      await loadUserScans(); // Reload scans after deletion
+      await loadUserScans();
+      debugPrint('✅ Scan na-delete successfully');
     } catch (e) {
-      debugPrint('Error deleting scan: $e');
+      debugPrint('❌ Error sa pag-delete sa scan: $e');
       rethrow;
     }
   }
