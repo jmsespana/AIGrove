@@ -215,114 +215,129 @@ class AppDrawer extends StatelessWidget {
       );
     }
   }
+}
 
-  void _navigateToHistory(BuildContext context) {
+void _navigateToHistory(BuildContext context) {
+  try {
+    // I-try una ang named route
+    Navigator.pushNamed(context, '/history');
+  } catch (e) {
+    debugPrint('Error using named route for history: $e');
+    // Fallback sa direct navigation using import
     try {
-      // I-try una ang named route
-      Navigator.pushNamed(context, '/history');
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const HistoryPage()),
+      );
     } catch (e) {
-      debugPrint('Error using named route for history: $e');
-      // Fallback sa direct navigation using import
-      try {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const HistoryPage()),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'History page not found. Please check implementation.',
-            ),
-          ),
-        );
-      }
-    }
-  }
-
-  void _navigateToSettings(BuildContext context) {
-    try {
-      Navigator.pushNamed(context, '/settings');
-    } catch (e) {
-      debugPrint('Error navigating to settings: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings page not available')),
+        const SnackBar(
+          content: Text('History page not found. Please check implementation.'),
+        ),
       );
     }
   }
+}
 
-  void _navigateToAbout(BuildContext context) {
-    try {
-      // I-try una ang named route
-      Navigator.pushNamed(context, '/about');
-    } catch (e) {
-      debugPrint('Error using named route for about: $e');
-      // Fallback sa direct navigation using import
-      try {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const AboutPage()),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('About page not found. Please check implementation.'),
-          ),
-        );
-      }
-    }
-  }
-
-  // Update logout handling to use UserService
-  void _handleLogout(BuildContext context) {
-    // Show confirmation dialog
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Logout'),
-          content: const Text('Are you sure you want to logout?'),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // Close dialog
-                _performLogout(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Logout'),
-            ),
-          ],
-        );
-      },
+void _navigateToSettings(BuildContext context) {
+  try {
+    Navigator.pushNamed(context, '/settings');
+  } catch (e) {
+    debugPrint('Error navigating to settings: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Settings page not available')),
     );
   }
+}
 
-  void _performLogout(BuildContext context) async {
+void _navigateToAbout(BuildContext context) {
+  try {
+    // I-try una ang named route
+    Navigator.pushNamed(context, '/about');
+  } catch (e) {
+    debugPrint('Error using named route for about: $e');
+    // Fallback sa direct navigation using import
     try {
-      await context.read<UserService>().signOut();
-      if (context.mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/landing',
-          (route) => false,
-        );
-      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const AboutPage()),
+      );
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error sa pag-logout: $e')));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('About page not found. Please check implementation.'),
+        ),
+      );
     }
+  }
+}
+
+// I-fix ang logout para dili mu-trigger ug rebuild sa drawer
+void _handleLogout(BuildContext context) async {
+  // I-capture ang UserService ug root navigator context UNA
+  final userService = context.read<UserService>();
+  final scaffoldMessenger = ScaffoldMessenger.of(context);
+  final navigator = Navigator.of(context, rootNavigator: true);
+
+  // I-close ang drawer
+  Navigator.pop(context);
+
+  // I-delay gamay para ma-complete ang drawer close animation
+  await Future.delayed(const Duration(milliseconds: 250));
+
+  // Karon pa mo-show ang confirmation dialog gamit ang root navigator
+  final shouldLogout = await showDialog<bool>(
+    // ignore: use_build_context_synchronously
+    context: navigator.context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Sigurado ka ba na gusto mo mag-logout?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      );
+    },
+  );
+
+  // Kung gi-cancel, dili mag-proceed
+  if (shouldLogout != true) return;
+
+  // I-show ang loading indicator gamit root navigator
+  showDialog(
+    // ignore: use_build_context_synchronously
+    context: navigator.context,
+    barrierDismissible: false,
+    builder: (context) => const Center(child: CircularProgressIndicator()),
+  );
+
+  try {
+    // I-perform ang actual logout
+    await userService.signOut();
+
+    // I-close ang loading indicator
+    navigator.pop();
+
+    // I-navigate to landing page ug i-clear ang navigation stack
+    navigator.pushNamedAndRemoveUntil('/landing', (route) => false);
+  } catch (e) {
+    // I-close ang loading indicator kung naa pa
+    navigator.pop();
+
+    scaffoldMessenger.showSnackBar(
+      SnackBar(content: Text('Error sa pag-logout: $e')),
+    );
   }
 }
