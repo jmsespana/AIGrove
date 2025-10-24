@@ -1,6 +1,9 @@
 // pages/register_page.dart
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../theme/app_theme.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -20,12 +23,12 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _confirmPasswordVisible = false;
   String _selectedRole = 'user';
 
-  // Add email validation
+  // I-validate ang email
   bool isValidEmail(String email) {
     return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
   }
 
-  // Add password strength validation
+  // I-check kung strong ba ang password
   bool isPasswordStrong(String password) {
     return password.length >= 8 && // min length
         RegExp(r'[A-Z]').hasMatch(password) && // uppercase
@@ -34,24 +37,20 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _register() async {
-    // Add validation before registration
+    // I-validate ang form before registration
     if (nameController.text.isEmpty ||
         lastnameController.text.isEmpty ||
         emailController.text.isEmpty ||
         passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Palihug fill-up ang tanang fields'),
-        ), // Bisaya translation
+        const SnackBar(content: Text('Palihug fill-up ang tanang fields')),
       );
       return;
     }
 
     if (!isValidEmail(emailController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Palihug i-enter ang valid nga email'),
-        ), // Bisaya translation
+        const SnackBar(content: Text('Palihug i-enter ang valid nga email')),
       );
       return;
     }
@@ -60,7 +59,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Ang password kinahanglan 8 ka characters ug naay uppercase, lowercase, ug numbers', // Bisaya translation
+            'Ang password kinahanglan 8 ka characters ug naay uppercase, lowercase, ug numbers',
           ),
         ),
       );
@@ -68,11 +67,9 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     if (passwordController.text != confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password doesn\'t match!'),
-        ), // Bisaya translation
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Password doesn\'t match!')));
       return;
     }
 
@@ -94,7 +91,7 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => loading = false);
 
       if (response.user != null) {
-        // Initialize user data by inserting a profile row into Supabase
+        // I-initialize ang user data pinaagi sa pag-insert sa profile row
         try {
           await Supabase.instance.client.from('profiles').insert({
             'id': response.user!.id,
@@ -104,7 +101,7 @@ class _RegisterPageState extends State<RegisterPage> {
             'role': _selectedRole,
           });
         } catch (e) {
-          // Ignore profile insert errors for now, registration itself succeeded
+          // Ignore profile insert errors, ang registration mismo successful na
         }
 
         // ignore: use_build_context_synchronously
@@ -136,363 +133,484 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   @override
+  void dispose() {
+    nameController.dispose();
+    lastnameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Define text colors based sa gradient position
+    final Color topTextColor = Colors.white; // White text sa green gradient
+    final Color bottomTextColor = isDark
+        ? Colors.black87
+        : const Color(0xFF2D5016); // Dark text sa light gradient
+
     return Scaffold(
-      body: SafeArea(
-        // Add SafeArea here
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset('assets/landing_bg.jpg', fit: BoxFit.cover),
-            Container(color: const Color.fromRGBO(0, 0, 0, 0.5)),
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Card(
-                  elevation: 8,
-                  color: const Color.fromRGBO(255, 255, 255, 0.3),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark
+                ? [AppTheme.darkGreen, const Color(0xFF1B5E20)]
+                : [
+                    AppTheme.primaryGreen,
+                    AppTheme.lightGreen,
+                    AppTheme.backgroundLight,
+                  ],
+          ),
+        ),
+        child: SafeArea(
+          child: Stack(
+            children: [
+              // Register form
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 24,
                   ),
-                  child: Container(
-                    width: double.infinity,
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 32,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          "Sign Up",
-                          style: TextStyle(
-                            fontSize: 32,
-                            color: Colors.white, // Changed to white
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        // For all TextFields (First Name, Last Name, Email, Password, Confirm Password)
-                        TextField(
-                          controller: nameController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: 'First Name',
-                            labelStyle: const TextStyle(color: Colors.white70),
-                            prefixIcon: const Icon(
-                              Icons.person_outline,
-                              color: Colors.white70,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: lastnameController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: 'Last Name',
-                            labelStyle: const TextStyle(color: Colors.white70),
-                            prefixIcon: const Icon(
-                              Icons.person_outline,
-                              color: Colors.white70,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: emailController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: 'Email',
-                            labelStyle: const TextStyle(color: Colors.white70),
-                            prefixIcon: const Icon(
-                              Icons.email_outlined,
-                              color: Colors.white70,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        // For the Role Selection Dropdown
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.white70),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              isExpanded: true,
-                              value: _selectedRole,
-                              dropdownColor: Colors.black87,
-                              style: const TextStyle(color: Colors.white),
-                              icon: const Icon(
-                                Icons.arrow_drop_down,
-                                color: Colors.white70,
-                              ),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'user',
-                                  child: Text(
-                                    'User',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'admin',
-                                  child: Text(
-                                    'Admin',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                              ],
-                              onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                  setState(() {
-                                    _selectedRole = newValue;
-                                  });
-                                }
-                              },
-                              hint: const Text(
-                                'Select Role',
-                                style: TextStyle(color: Colors.white70),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        // Password field
-                        TextField(
-                          controller: passwordController,
-                          obscureText: !_passwordVisible,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            labelStyle: const TextStyle(color: Colors.white70),
-                            prefixIcon: const Icon(
-                              Icons.lock_outlined,
-                              color: Colors.white70,
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _passwordVisible
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                                color: Colors.white70, // Added color here
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _passwordVisible = !_passwordVisible;
-                                });
-                              },
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        // Confirm Password field
-                        TextField(
-                          controller: confirmPasswordController,
-                          obscureText: !_confirmPasswordVisible,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: 'Confirm Password',
-                            labelStyle: const TextStyle(color: Colors.white70),
-                            prefixIcon: const Icon(
-                              Icons.lock_outlined,
-                              color: Colors.white70,
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _confirmPasswordVisible
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                                color: Colors.white70, // Added color here
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _confirmPasswordVisible =
-                                      !_confirmPasswordVisible;
-                                });
-                              },
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Colors.white,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: loading ? null : _register,
-                            style: ElevatedButton.styleFrom(
-                              // ignore: deprecated_member_use
-                              backgroundColor: Colors.white.withOpacity(0.9),
-                              foregroundColor: Colors.black87,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 2,
-                            ),
-                            child: loading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text(
-                                    "Sign Up",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        // Divider
-                        Row(
-                          children: [
-                            Expanded(child: Divider(color: Colors.white70)),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: Text(
-                                "OR",
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            Expanded(child: Divider(color: Colors.white70)),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        // Back to Login link
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "Already have an account? ",
-                              style: TextStyle(color: Colors.white70),
-                            ),
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.pushNamed(context, '/login'),
-                              child: const Text(
-                                "Login",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // App icon - white sa taas
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.25),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 12,
+                              spreadRadius: 2,
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                        child: Icon(
+                          Icons.eco,
+                          size: 45,
+                          color: isDark ? AppTheme.lightGreen : topTextColor,
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Welcome text - white sa green area
+                      Text(
+                        "Create Account",
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? AppTheme.lightGreen : topTextColor,
+                          letterSpacing: 1,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.3),
+                              offset: const Offset(0, 2),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      Text(
+                        "Join us in exploring mangroves",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: isDark
+                              ? Colors.white.withOpacity(0.9)
+                              : topTextColor,
+                          fontWeight: FontWeight.w400,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.2),
+                              offset: const Offset(0, 1),
+                              blurRadius: 3,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // First Name field - naa na sa transition area, gamiton ang semi-dark
+                      _buildTextField(
+                        controller: nameController,
+                        label: 'First Name',
+                        icon: Icons.person_outline,
+                        isDark: isDark,
+                        textColor: isDark
+                            ? topTextColor
+                            : const Color(0xFF1B4332),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Last Name field
+                      _buildTextField(
+                        controller: lastnameController,
+                        label: 'Last Name',
+                        icon: Icons.person_outline,
+                        isDark: isDark,
+                        textColor: isDark
+                            ? topTextColor
+                            : const Color(0xFF1B4332),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Email field
+                      _buildTextField(
+                        controller: emailController,
+                        label: 'Email Address',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        isDark: isDark,
+                        textColor: isDark ? topTextColor : bottomTextColor,
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Role Selection Dropdown - dark text sa light gradient
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.12)
+                              : Colors.white.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.4)
+                                : bottomTextColor.withOpacity(0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _selectedRole,
+                            dropdownColor: isDark
+                                ? AppTheme.darkGreen
+                                : Colors.white,
+                            style: TextStyle(
+                              color: isDark ? topTextColor : bottomTextColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            icon: Icon(
+                              Icons.arrow_drop_down,
+                              color: isDark
+                                  ? AppTheme.lightGreen
+                                  : bottomTextColor,
+                            ),
+                            items: [
+                              DropdownMenuItem(
+                                value: 'user',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.person,
+                                      color: isDark
+                                          ? topTextColor
+                                          : bottomTextColor,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text('User'),
+                                  ],
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'admin',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.admin_panel_settings,
+                                      color: isDark
+                                          ? topTextColor
+                                          : bottomTextColor,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text('Admin'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                setState(() {
+                                  _selectedRole = newValue;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Password field
+                      _buildTextField(
+                        controller: passwordController,
+                        label: 'Password',
+                        icon: Icons.lock_outlined,
+                        obscureText: !_passwordVisible,
+                        isDark: isDark,
+                        textColor: isDark ? topTextColor : bottomTextColor,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _passwordVisible
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: isDark
+                                ? topTextColor.withOpacity(0.8)
+                                : bottomTextColor.withOpacity(0.7),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _passwordVisible = !_passwordVisible;
+                            });
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Confirm Password field
+                      _buildTextField(
+                        controller: confirmPasswordController,
+                        label: 'Confirm Password',
+                        icon: Icons.lock_outlined,
+                        obscureText: !_confirmPasswordVisible,
+                        isDark: isDark,
+                        textColor: isDark ? topTextColor : bottomTextColor,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _confirmPasswordVisible
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: isDark
+                                ? topTextColor.withOpacity(0.8)
+                                : bottomTextColor.withOpacity(0.7),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _confirmPasswordVisible =
+                                  !_confirmPasswordVisible;
+                            });
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Register button - gamit ang theme colors
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: loading ? null : _register,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark
+                                ? AppTheme.lightGreen
+                                : AppTheme.primaryGreen,
+                            foregroundColor: isDark
+                                ? Colors.black
+                                : Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 8,
+                            shadowColor:
+                                (isDark
+                                        ? AppTheme.lightGreen
+                                        : AppTheme.primaryGreen)
+                                    .withOpacity(0.4),
+                          ),
+                          child: loading
+                              ? SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      isDark ? Colors.black : Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  "Sign Up",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1,
+                                    color: isDark ? Colors.black : Colors.white,
+                                  ),
+                                ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Divider - adaptive color
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.5)
+                                  : bottomTextColor.withOpacity(0.3),
+                              thickness: 1.5,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              "OR",
+                              style: TextStyle(
+                                color: isDark
+                                    ? topTextColor.withOpacity(0.85)
+                                    : bottomTextColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.5)
+                                  : bottomTextColor.withOpacity(0.3),
+                              thickness: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Login link - dark text sa bottom white gradient
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Already have an account? ",
+                            style: TextStyle(
+                              color: isDark
+                                  ? topTextColor.withOpacity(0.9)
+                                  : bottomTextColor,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                              shadows: isDark
+                                  ? [
+                                      Shadow(
+                                        color: Colors.black.withOpacity(0.3),
+                                        offset: const Offset(0, 1),
+                                        blurRadius: 2,
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pushNamed(context, '/login'),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              "Login",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? AppTheme.lightGreen
+                                    : AppTheme.primaryGreen,
+                                fontSize: 15,
+                                shadows: isDark
+                                    ? [
+                                        Shadow(
+                                          color: Colors.black.withOpacity(0.3),
+                                          offset: const Offset(0, 1),
+                                          blurRadius: 2,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper method para sa text fields - with adaptive text color
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required bool isDark,
+    required Color textColor,
+    bool obscureText = false,
+    TextInputType? keyboardType,
+    Widget? suffixIcon,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withOpacity(0.12)
+            : Colors.white.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.4)
+              : textColor.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        style: TextStyle(color: textColor, fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(
+            color: textColor.withOpacity(0.7),
+            fontWeight: FontWeight.w400,
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: isDark ? AppTheme.lightGreen : textColor,
+          ),
+          suffixIcon: suffixIcon,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 20,
+          ),
         ),
       ),
     );
