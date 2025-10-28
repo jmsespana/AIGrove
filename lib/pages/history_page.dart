@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:aigrove/services/user_service.dart';
 import 'package:aigrove/services/profile_service.dart';
@@ -18,6 +20,11 @@ class _HistoryPageState extends State<HistoryPage>
   late TabController _tabController;
   bool _isLoading = true;
   List<Map<String, dynamic>> _quizHistory = [];
+
+  // Sample scan history - dapat gikan ni sa database later
+
+  // Cache para sa place names para dili na mag-convert pag balik-balik
+  final Map<String, String> _placeNameCache = {};
 
   @override
   void initState() {
@@ -54,6 +61,72 @@ class _HistoryPageState extends State<HistoryPage>
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  // Method para kuhaon ang place name gikan sa coordinates
+  // BAG-O: I-fix ang _getPlaceName para dili mag-error kung null ang values
+  Future<String> _getPlaceName(LatLng location) async {
+    // I-check sa una kung naa na sa cache
+    final cacheKey = '${location.latitude},${location.longitude}';
+    if (_placeNameCache.containsKey(cacheKey)) {
+      return _placeNameCache[cacheKey]!;
+    }
+
+    try {
+      // I-convert ang coordinates to place name
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        location.latitude,
+        location.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+
+        // I-format ang place name - SAFE nga way, walay null check operator
+        String placeName = '';
+
+        // Prioritize locality (city/municipality) and subadministrativeArea (province)
+        if (place.locality?.isNotEmpty ?? false) {
+          placeName = place.locality!;
+        } else if (place.subLocality?.isNotEmpty ?? false) {
+          placeName = place.subLocality!;
+        } else if (place.thoroughfare?.isNotEmpty ?? false) {
+          placeName = place.thoroughfare!;
+        }
+
+        // I-add ang province kung available
+        if (place.subAdministrativeArea?.isNotEmpty ?? false) {
+          if (placeName.isNotEmpty) {
+            placeName += ', ${place.subAdministrativeArea}';
+          } else {
+            placeName = place.subAdministrativeArea!;
+          }
+        }
+
+        // Kung wala gihapon, gamiton ang administrative area or country
+        if (placeName.isEmpty) {
+          if (place.administrativeArea?.isNotEmpty ?? false) {
+            placeName = place.administrativeArea!;
+          } else if (place.country?.isNotEmpty ?? false) {
+            placeName = place.country!;
+          }
+        }
+
+        // I-save sa cache kung naay value
+        if (placeName.isNotEmpty) {
+          _placeNameCache[cacheKey] = placeName;
+          return placeName;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting place name: $e');
+    }
+
+    // Fallback: ibalik ang coordinates kung dili makuha ang place name
+    final fallback =
+        '${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}';
+    _placeNameCache[cacheKey] = fallback; // I-cache pud ang fallback
+    return fallback;
   }
 
   @override
@@ -100,7 +173,7 @@ class _HistoryPageState extends State<HistoryPage>
     if (scans.isEmpty) {
       return _buildEmptyState(
         'No Scan History',
-        'Wala pa kay mga na-scan na mangrove. I-scan para makita diri.',
+        'You haven\'t scanned any mangroves yet. Start scanning to see them here.',
         Icons.camera,
       );
     }
@@ -127,7 +200,7 @@ class _HistoryPageState extends State<HistoryPage>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Photo thumbnail - MAS DAKO UG MAS NINDOT
+                  // Photo thumbnail
                   _buildScanThumbnail(scan['image_url']),
                   const SizedBox(width: 12),
 
@@ -168,29 +241,60 @@ class _HistoryPageState extends State<HistoryPage>
                         ),
                         const SizedBox(height: 4),
 
-                        // Location with icon (kung naa)
+                        // Location with place name (kung naa coordinates)
                         if (scan['latitude'] != null &&
                             scan['longitude'] != null)
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.location_on,
-                                size: 14,
-                                color: Colors.grey[600],
+                          FutureBuilder<String>(
+                            future: _getPlaceName(
+                              LatLng(
+                                scan['latitude'].toDouble(),
+                                scan['longitude'].toDouble(),
                               ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  '${scan['latitude'].toStringAsFixed(4)}, ${scan['longitude'].toStringAsFixed(4)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
+                            ),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return Row(
+                                  children: [
+                                    Icon(
+                                      Icons.location_on,
+                                      size: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Loading location...',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+
+                              return Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 14,
+                                    color: Colors.red[700],
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      snapshot.data ?? 'Unknown location',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
 
                         // Notes preview (kung naa)
@@ -355,7 +459,7 @@ class _HistoryPageState extends State<HistoryPage>
                     ),
                   ),
 
-                  // BAG-O: Full-width image at the top
+                  // Full-width image
                   if (scan['image_url'] != null && scan['image_url'].isNotEmpty)
                     Container(
                       width: double.infinity,
@@ -413,12 +517,23 @@ class _HistoryPageState extends State<HistoryPage>
                   ),
                   const SizedBox(height: 12),
 
-                  // Location (kung naa)
+                  // Location with place name (kung naa coordinates)
                   if (scan['latitude'] != null && scan['longitude'] != null)
-                    _buildDetailRow(
-                      Icons.location_on,
-                      'Location',
-                      '${scan['latitude'].toStringAsFixed(6)}, ${scan['longitude'].toStringAsFixed(6)}',
+                    FutureBuilder<String>(
+                      future: _getPlaceName(
+                        LatLng(
+                          scan['latitude'].toDouble(),
+                          scan['longitude'].toDouble(),
+                        ),
+                      ),
+                      builder: (context, snapshot) {
+                        return _buildDetailRow(
+                          Icons.location_on,
+                          'Location',
+                          snapshot.data ??
+                              '${scan['latitude'].toStringAsFixed(6)}, ${scan['longitude'].toStringAsFixed(6)}',
+                        );
+                      },
                     ),
                   const SizedBox(height: 12),
 
@@ -461,18 +576,40 @@ class _HistoryPageState extends State<HistoryPage>
                   ),
                   const SizedBox(height: 20),
 
-                  // Close button na lang (gi-tangtang ang View Location button)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                      label: const Text('Close'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        backgroundColor: Colors.green.shade700,
+                  // BAG-O: Action buttons (Close ug Delete)
+                  Row(
+                    children: [
+                      // Close button
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                          label: const Text('Close'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: Colors.grey.shade600,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      // Delete button
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context); // I-close ang bottom sheet
+                            _confirmDeleteScan(
+                              scan,
+                            ); // I-confirm ang pag-delete
+                          },
+                          icon: const Icon(Icons.delete),
+                          label: const Text('Delete'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: Colors.red.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -522,7 +659,7 @@ class _HistoryPageState extends State<HistoryPage>
     if (_quizHistory.isEmpty) {
       return _buildEmptyState(
         'No Quiz History',
-        'Wala pa kay completed quizzes. Suwayi ang mga quiz sa Challenge page.',
+        'You haven\'t completed any quizzes yet. Try the quizzes in the Challenge page.',
         Icons.quiz,
       );
     }
@@ -697,6 +834,40 @@ class _HistoryPageState extends State<HistoryPage>
                   quiz['difficulty'].toString().toUpperCase(),
                   Icons.trending_up,
                 ),
+
+              const SizedBox(height: 24),
+
+              // BAG-O: Action buttons para sa quiz
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Close'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _confirmDeleteQuiz(quiz);
+                      },
+                      icon: const Icon(Icons.delete),
+                      label: const Text('Delete'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Colors.red.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         );
@@ -704,15 +875,293 @@ class _HistoryPageState extends State<HistoryPage>
     );
   }
 
+  // BAG-O: Method para mag-confirm sa pag-delete ng scan
+  Future<void> _confirmDeleteScan(Map<String, dynamic> scan) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Scan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Are you sure you want to delete this scan?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.eco, color: Colors.red.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      scan['species_name'] ?? 'Unknown Species',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'This action cannot be undone.',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.delete),
+            label: const Text('Delete'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Kung gi-confirm ang delete
+    if (confirm == true) {
+      await _deleteScan(scan);
+    }
+  }
+
+  // BAG-O: Method para mag-delete ng scan sa database
+  Future<void> _deleteScan(Map<String, dynamic> scan) async {
+    try {
+      // I-show ang loading indicator
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Deleting scan...'),
+            ],
+          ),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // I-delete gikan sa UserService
+      final userService = context.read<UserService>();
+      await userService.deleteScan(scan['id']);
+
+      // I-reload ang history
+      await _loadHistory();
+
+      // I-show success message
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Successfully deleted ${scan['species_name'] ?? 'scan'}',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green.shade700,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error deleting scan: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete scan: $e'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  // BAG-O: Method para mag-confirm sa pag-delete ng quiz
+  Future<void> _confirmDeleteQuiz(Map<String, dynamic> quiz) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Quiz Result'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Are you sure you want to delete this quiz result?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.quiz, color: Colors.red.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      quiz['category_name'],
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'This will also remove the points earned from this quiz.',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.delete),
+            label: const Text('Delete'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Kung gi-confirm ang delete
+    if (confirm == true) {
+      await _deleteQuiz(quiz);
+    }
+  }
+
+  // BAG-O: Method para mag-delete ng quiz sa database
+  Future<void> _deleteQuiz(Map<String, dynamic> quiz) async {
+    try {
+      // I-show ang loading indicator
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Deleting quiz result...'),
+            ],
+          ),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // I-delete gikan sa ProfileService
+      // Walay conversion na - UUID string na siya
+      final profileService = context.read<ProfileService>();
+      final quizId = quiz['id'] as String; // UUID string na
+
+      await profileService.deleteQuizResult(quizId);
+
+      // I-reload ang history
+      await _loadHistory();
+
+      // I-show success message
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Successfully deleted ${quiz['category_name']} quiz result',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green.shade700,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error deleting quiz: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete quiz result: $e'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  /// BAG-O: Helper widget para sa quiz statistics
   Widget _buildQuizStat(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.grey.shade700),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Icon(icon, color: Colors.green.shade700, size: 24),
+        const SizedBox(height: 8),
         Text(
           label,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -742,4 +1191,19 @@ class _HistoryPageState extends State<HistoryPage>
       ),
     );
   }
+}
+
+// Model class para sa scan history
+class ScanHistory {
+  final String species;
+  final LatLng location;
+  final DateTime dateScanned;
+  final double confidence;
+
+  ScanHistory({
+    required this.species,
+    required this.location,
+    required this.dateScanned,
+    required this.confidence,
+  });
 }

@@ -143,6 +143,21 @@ class ProfileService extends ChangeNotifier {
     }
   }
 
+  // BAG-O: Method para mag-delete ng quiz result
+  Future<void> deleteQuizResult(String quizResultId) async {
+    try {
+      await _supabase
+          .from('quiz_history') // I-change pud ang table name to quiz_history
+          .delete()
+          .eq('id', quizResultId);
+
+      debugPrint('Quiz result deleted successfully: $quizResultId');
+    } catch (e) {
+      debugPrint('Error deleting quiz result: $e');
+      rethrow;
+    }
+  }
+
   // I-get ang quiz history (same as before)
   Future<List<Map<String, dynamic>>> getQuizHistory() async {
     try {
