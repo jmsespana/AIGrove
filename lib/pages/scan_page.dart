@@ -207,10 +207,10 @@ class _ScanPageState extends State<ScanPage> {
     });
 
     try {
-      // Get ug fix ang image orientation, then resize to 640x640
+      // I-fix ang orientation ug i-resize to 640x640
       final processedFile = await _fixImageOrientation(imageFile);
 
-      // Get ang processed image dimensions (dapat 640x640 na ni)
+      // Kuha ang processed image dimensions (dapat 640x640 na ni)
       final imageBytes = await processedFile.readAsBytes();
       final decodedImage = img.decodeImage(imageBytes);
 
@@ -221,26 +221,82 @@ class _ScanPageState extends State<ScanPage> {
         );
       }
 
-      // Run detection sa processed image
+      // I-run ang detection sa processed image
       final detections = await _mlService.detectObjects(processedFile);
 
-      // Get only the best detection (highest confidence)
-      final bestDetection = detections.isNotEmpty
-          ? [detections.reduce((a, b) => a.confidence > b.confidence ? a : b)]
-          : <DetectionResult>[];
+      // ⭐ Mas strict nga thresholds para dili mu-accept og random plants
+      const double highConfidenceThreshold = 0.80; // 80% - Sure kaayo nga mangrove
+      const double mediumConfidenceThreshold = 0.65; // 65% - Posible pero uncertain
+      const double lowConfidenceThreshold = 0.50; // 50% - Minimum cutoff
 
+      // Kuha lang ang best detection
+      final bestDetection = detections.isNotEmpty
+          ? detections.reduce((a, b) => a.confidence > b.confidence ? a : b)
+          : null;
+
+      // I-validate kung legit ba ang detection
+      if (bestDetection == null || bestDetection.confidence < lowConfidenceThreshold) {
+        setState(() {
+          _processedImage = processedFile;
+          _detections = null;
+          _isLoading = false;
+        });
+        _showError(
+          'Not detected as a mangrove species! Confidence too low (${bestDetection != null ? (bestDetection.confidence * 100).toStringAsFixed(1) : "0"}%). Please scan a valid mangrove leaf.',
+        );
+        return;
+      }
+
+      // I-update ang state with detection
       setState(() {
         _processedImage = processedFile;
-        _detections = bestDetection;
+        _detections = [bestDetection];
         _isLoading = false;
       });
 
-      if (bestDetection.isEmpty) {
-        _showError('No mangroves detected!');
+      // I-show ang appropriate feedback based sa confidence level
+      if (!mounted) return;
+
+      if (bestDetection.confidence >= highConfidenceThreshold) {
+        // High confidence - Sure kaayo
+        debugPrint('✅ High confidence detection: ${bestDetection.label} (${(bestDetection.confidence * 100).toStringAsFixed(1)}%)');
+        await _saveScanToHistory(bestDetection);
+      } else if (bestDetection.confidence >= mediumConfidenceThreshold) {
+        // Medium confidence - I-show ang warning pero i-save gihapon
+        debugPrint('⚠️ Medium confidence detection: ${bestDetection.label} (${(bestDetection.confidence * 100).toStringAsFixed(1)}%)');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Detected as ${bestDetection.label} with ${(bestDetection.confidence * 100).toStringAsFixed(1)}% confidence.\n\nResults may not be fully accurate. Please verify the identification!',
+            ),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+        await _saveScanToHistory(bestDetection);
       } else {
-        // I-save ang successful detection sa history
-        if (!mounted) return;
-        await _saveScanToHistory(bestDetection.first);
+        // Low confidence (50-65%) - I-show ang result pero DILI i-save
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Very low confidence (${(bestDetection.confidence * 100).toStringAsFixed(1)}%).\n\nThis may NOT be a mangrove species!\n\nPlease:\n• Scan actual mangrove leaves\n• Ensure good lighting\n• Focus clearly on the leaf',
+            ),
+            backgroundColor: Colors.red[700],
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'RETRY',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+        // DILI i-save ang scan kay low confidence
+        debugPrint('❌ Low confidence, scan NOT SAVED: ${bestDetection.label} (${(bestDetection.confidence * 100).toStringAsFixed(1)}%)');
       }
     } catch (e) {
       setState(() {
@@ -503,10 +559,11 @@ class _ScanPageState extends State<ScanPage> {
               ],
             ),
             const SizedBox(height: 16),
+            // ⭐ I-update ang confidence indicator with color coding
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isDarkMode ? Colors.green[900] : Colors.green[50],
+                color: _getConfidenceColor(detection.confidence),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -514,13 +571,17 @@ class _ScanPageState extends State<ScanPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.verified, color: Colors.green[700], size: 20),
+                      Icon(
+                        _getConfidenceIcon(detection.confidence),
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Confidence',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
-                          color: subtextColor,
+                          color: Colors.white,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -528,10 +589,10 @@ class _ScanPageState extends State<ScanPage> {
                   ),
                   Text(
                     '$confidencePercent%',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green[700],
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -579,6 +640,20 @@ class _ScanPageState extends State<ScanPage> {
         ),
       ),
     );
+  }
+
+  // ⭐ Helper method para sa confidence color
+  Color _getConfidenceColor(double confidence) {
+    if (confidence >= 0.75) return Colors.green[700]!;
+    if (confidence >= 0.55) return Colors.orange[700]!;
+    return Colors.red[700]!;
+  }
+
+  // ⭐ Helper method para sa confidence icon
+  IconData _getConfidenceIcon(double confidence) {
+    if (confidence >= 0.75) return Icons.verified;
+    if (confidence >= 0.55) return Icons.warning_amber_rounded;
+    return Icons.error_outline;
   }
 
   Widget _buildLoadingResultsCard() {

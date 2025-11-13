@@ -1103,17 +1103,20 @@ class _HistoryPageState extends State<HistoryPage>
       );
 
       // I-delete gikan sa ProfileService
-      // Walay conversion na - UUID string na siya
       final profileService = context.read<ProfileService>();
-      final quizId = quiz['id'] as String; // UUID string na
+      final quizId = quiz['id'].toString(); // I-ensure nga string
+
+      debugPrint('Deleting quiz with ID: $quizId');
+      debugPrint('Quiz data: $quiz');
 
       await profileService.deleteQuizResult(quizId);
 
-      // I-reload ang history
+      // I-reload ang history para makita ang updated data
       await _loadHistory();
 
       // I-show success message
       if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -1134,11 +1137,12 @@ class _HistoryPageState extends State<HistoryPage>
     } catch (e) {
       debugPrint('Error deleting quiz: $e');
       if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to delete quiz result: $e'),
+          content: Text('Failed to delete quiz result: ${e.toString()}'),
           backgroundColor: Colors.red.shade700,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
         ),
       );
     }

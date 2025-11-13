@@ -84,4 +84,4 @@ if (response.session != null) {
 
 ## Comments
 
-- Make the comments Tagalog or bisaya for better understanding
+- Make the comments Tagalog or bisaya for better understanding, strict for comments only do not use this for the main text of the code
