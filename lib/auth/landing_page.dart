@@ -1,5 +1,4 @@
 // ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/user_service.dart';
@@ -111,8 +110,8 @@ class _LandingPageState extends State<LandingPage>
 
                           // App Logo/Icon with mangrove theme
                           Container(
-                            width: 120,
-                            height: 120,
+                            width: 160,
+                            height: 160,
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               shape: BoxShape.circle,
@@ -124,12 +123,20 @@ class _LandingPageState extends State<LandingPage>
                                 ),
                               ],
                             ),
-                            child: Icon(
-                              Icons.eco,
-                              size: 70,
-                              color: isDark
-                                  ? AppTheme.lightGreen
-                                  : topTextColor,
+                            // I-clip ang image para makuha ang circular shape
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/images/logo.png',
+                                fit: BoxFit
+                                    .cover, // I-adjust unsaon pag-fit ang logo
+                                // Para makuha ang white/transparent effect:
+                                color: isDark
+                                    ? AppTheme.lightGreen.withOpacity(0.9)
+                                    : null,
+                                colorBlendMode: isDark
+                                    ? BlendMode.modulate
+                                    : null,
+                              ),
                             ),
                           ),
 
@@ -137,7 +144,7 @@ class _LandingPageState extends State<LandingPage>
 
                           // App Title - white text sa green area
                           Text(
-                            'AIGrove',
+                            'AIgrove',
                             style: TextStyle(
                               fontSize: 52,
                               fontWeight: FontWeight.bold,

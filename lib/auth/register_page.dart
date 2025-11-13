@@ -182,8 +182,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     children: [
                       // App icon - white sa taas
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: 120, // Gi-padak-on para mas klaro ang logo
+                        height: 120,
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.25),
                           shape: BoxShape.circle,
@@ -195,10 +195,24 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ],
                         ),
-                        child: Icon(
-                          Icons.eco,
-                          size: 45,
-                          color: isDark ? AppTheme.lightGreen : topTextColor,
+                        // I-clip para makuha ang circular shape
+                        child: ClipOval(
+                          child: Padding(
+                            padding: const EdgeInsets.all(
+                              4,
+                            ), // Spacing sa sulod
+                            child: Image.asset(
+                              'assets/images/logo.png', // Imong logo diri
+                              fit: BoxFit.contain, // Para dili ma-crop ang logo
+                              // Optional: I-apply ang color tint para mu-match sa theme
+                              color: isDark
+                                  ? AppTheme.lightGreen.withOpacity(0.9)
+                                  : null,
+                              colorBlendMode: isDark
+                                  ? BlendMode.modulate
+                                  : null,
+                            ),
+                          ),
                         ),
                       ),
 

@@ -29,17 +29,38 @@ class AboutPage extends StatelessWidget {
                         height: 120,
                         width: 120,
                         decoration: BoxDecoration(
-                          color: Colors.green.shade50,
+                          // ignore: deprecated_member_use
+                          color: Colors.white.withOpacity(
+                            0.25,
+                          ), // Same sa login page
                           shape: BoxShape.circle,
+                          boxShadow: [
+                            // I-add ang shadow para mas nindot (Bisaya)
+                            BoxShadow(
+                              // ignore: deprecated_member_use
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
                         child: ClipOval(
-                          child: Image.asset(
-                            'assets/images/logo.png',
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                              Icons.eco,
-                              size: 70,
-                              color: Theme.of(context).colorScheme.primary,
+                          child: Padding(
+                            padding: const EdgeInsets.all(
+                              8,
+                            ), // Spacing para dili lapaw ang logo (Bisaya)
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              fit: BoxFit
+                                  .contain, // I-change sa contain para klaro ang logo (Bisaya)
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(
+                                    Icons.eco,
+                                    size: 70,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
                             ),
                           ),
                         ),
@@ -63,7 +84,8 @@ class AboutPage extends StatelessWidget {
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -85,7 +107,8 @@ class AboutPage extends StatelessWidget {
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -102,10 +125,22 @@ class AboutPage extends StatelessWidget {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: const [
-                            _MissionBullet(text: 'Make mangrove ID accessible via simple photo capture.'),
-                            _MissionBullet(text: 'Provide localized geolocation data for research and restoration.'),
-                            _MissionBullet(text: 'Engage communities through quizzes and challenges.'),
-                            _MissionBullet(text: 'Support conservation decisions with easy-to-read dashboards.'),
+                            _MissionBullet(
+                              text:
+                                  'Make mangrove ID accessible via simple photo capture.',
+                            ),
+                            _MissionBullet(
+                              text:
+                                  'Provide localized geolocation data for research and restoration.',
+                            ),
+                            _MissionBullet(
+                              text:
+                                  'Engage communities through quizzes and challenges.',
+                            ),
+                            _MissionBullet(
+                              text:
+                                  'Support conservation decisions with easy-to-read dashboards.',
+                            ),
                           ],
                         ),
                       ],
@@ -118,7 +153,8 @@ class AboutPage extends StatelessWidget {
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: Column(
@@ -154,7 +190,8 @@ class AboutPage extends StatelessWidget {
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: Column(
@@ -173,7 +210,8 @@ class AboutPage extends StatelessWidget {
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: Column(
@@ -209,11 +247,12 @@ class AboutPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Salamat! / Daghang Salamat sa pag suporta sa AIGrove.',
+                          'Thank you for using AIgrove! Together, we can make a difference in mangrove conservation.',
                           style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade700,
-                              fontStyle: FontStyle.italic),
+                            fontSize: 13,
+                            color: Colors.grey.shade700,
+                            fontStyle: FontStyle.italic,
+                          ),
                         ),
                       ],
                     ),
@@ -235,21 +274,27 @@ class AboutPage extends StatelessWidget {
     return Text(
       title,
       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).colorScheme.primary,
+      ),
     );
   }
 
   Widget _buildFeatureRow(
-      BuildContext context, IconData icon, String title, String desc) {
+    BuildContext context,
+    IconData icon,
+    String title,
+    String desc,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
         children: [
           CircleAvatar(
             // ignore: deprecated_member_use
-            backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.primary.withOpacity(0.12),
             child: Icon(icon, color: Theme.of(context).colorScheme.primary),
           ),
           const SizedBox(width: 12),
@@ -257,8 +302,10 @@ class AboutPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 4),
                 Text(desc, style: const TextStyle(fontSize: 14)),
               ],
@@ -307,7 +354,9 @@ class AboutPage extends StatelessWidget {
                       errorBuilder: (context, error, stackTrace) {
                         // Debugging print para makita nato ang problem (Tagalog/Bisaya)
                         // ignore: avoid_print
-                        print('Error loading image: ${member['imagePath']} - $error');
+                        print(
+                          'Error loading image: ${member['imagePath']} - $error',
+                        );
                         return Icon(
                           Icons.person,
                           size: 56,
@@ -337,9 +386,13 @@ class AboutPage extends StatelessWidget {
   }
 
   // Contact tile with copy-to-clipboard behavior
-  Widget _buildContactTile(BuildContext context, IconData icon, String label,
-      String value,
-      {String copyLabel = 'Copied'}) {
+  Widget _buildContactTile(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value, {
+    String copyLabel = 'Copied',
+  }) {
     return InkWell(
       onTap: () => _copyToClipboard(context, value, copyLabel),
       child: Row(
@@ -350,7 +403,10 @@ class AboutPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  label,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 2),
                 Text(value),
               ],
@@ -364,7 +420,11 @@ class AboutPage extends StatelessWidget {
   }
 
   // Kopyahon ang text sa clipboard, dayon show SnackBar (Tagalog/Bisaya comment)
-  void _copyToClipboard(BuildContext context, String text, String snackbarLabel) {
+  void _copyToClipboard(
+    BuildContext context,
+    String text,
+    String snackbarLabel,
+  ) {
     Clipboard.setData(ClipboardData(text: text)).then((_) {
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
@@ -389,7 +449,11 @@ class _MissionBullet extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check_circle, size: 18, color: Theme.of(context).colorScheme.primary),
+          Icon(
+            Icons.check_circle,
+            size: 18,
+            color: Theme.of(context).colorScheme.primary,
+          ),
           const SizedBox(width: 8),
           Expanded(child: Text(text, style: const TextStyle(fontSize: 15))),
         ],
