@@ -1,3 +1,4 @@
+import 'package:aigrove/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -241,7 +242,11 @@ void _navigateToHistory(BuildContext context) {
 
 void _navigateToSettings(BuildContext context) {
   try {
-    Navigator.pushNamed(context, '/settings');
+    // Direct navigation same sa uban nga pages
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SettingsPage()),
+    );
   } catch (e) {
     debugPrint('Error navigating to settings: $e');
     ScaffoldMessenger.of(context).showSnackBar(

@@ -34,7 +34,9 @@ class ProfileService extends ChangeNotifier {
       if (statsResponse != null) {
         _points = statsResponse['total_points'] ?? 0;
         _challengesCompleted = statsResponse['challenges_completed'] ?? 0;
-        debugPrint('Loaded points: $_points, challenges: $_challengesCompleted');
+        debugPrint(
+          'Loaded points: $_points, challenges: $_challengesCompleted',
+        );
       } else {
         // Kung wala pa entry, i-create!
         debugPrint('Walay user_stats entry, gi-create karon...');
@@ -55,7 +57,7 @@ class ProfileService extends ChangeNotifier {
           .select()
           .eq('user_id', userId)
           .count();
-      
+
       _totalScans = scansResponse.count;
       debugPrint('Total scans: $_totalScans');
 
@@ -91,7 +93,8 @@ class ProfileService extends ChangeNotifier {
         activities.add({
           'activity_type': 'quiz',
           'title': 'Completed ${quiz['category_name']} Quiz',
-          'description': 'Scored ${quiz['correct_answers']}/${quiz['total_questions']} correct • ${((quiz['correct_answers'] / quiz['total_questions']) * 100).round()}%',
+          'description':
+              'Scored ${quiz['correct_answers']}/${quiz['total_questions']} correct • ${((quiz['correct_answers'] / quiz['total_questions']) * 100).round()}%',
           'created_at': quiz['completed_at'],
           'metadata': {
             'score': quiz['score'],
@@ -133,7 +136,7 @@ class ProfileService extends ChangeNotifier {
 
       // I-limit ang results
       _recentActivity = activities.take(limit).toList();
-      
+
       debugPrint('Loaded ${_recentActivity.length} recent activities');
       notifyListeners();
     } catch (e) {
@@ -143,38 +146,115 @@ class ProfileService extends ChangeNotifier {
     }
   }
 
-  // BAG-O: Method para mag-delete ng quiz result
-  Future<void> deleteQuizResult(String quizResultId) async {
-    try {
-      await _supabase
-          .from('quiz_history') // I-change pud ang table name to quiz_history
-          .delete()
-          .eq('id', quizResultId);
+  // Cache para sa quiz history
+  List<Map<String, dynamic>>? _cachedQuizHistory;
 
-      debugPrint('Quiz result deleted successfully: $quizResultId');
+  Future<List<Map<String, dynamic>>> getQuizHistory() async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) return [];
+
+      // Kung naa nay cache ug bag-o pa, ibalik ra
+      if (_cachedQuizHistory != null) {
+        return _cachedQuizHistory!;
+      }
+
+      // I-CHANGE NI - gikan quiz_results to quiz_history
+      // Wala nay need i-join ang quiz_categories kay naa naman ang category_name sa quiz_history
+      final response = await _supabase
+          .from('quiz_history') // CHANGED: gikan quiz_results
+          .select('*') // CHANGED: simple select lang, wala nay join
+          .eq('user_id', userId)
+          .order('completed_at', ascending: false);
+
+      // I-format ang data - SIMPLIFIED na kay direct na ang fields
+      final quizHistory = (response as List).map((quiz) {
+        return {
+          'id': quiz['id'],
+          'category_name':
+              quiz['category_name'], // CHANGED: direct na from quiz_history
+          'score': quiz['score'],
+          'total_questions': quiz['total_questions'],
+          'correct_answers': quiz['correct_answers'], // I-include pud ni
+          'completed_at': quiz['completed_at'],
+          'time_spent': quiz['time_spent'] ?? 0,
+          'difficulty': quiz['difficulty'],
+          'is_passing': quiz['is_passing'] ?? false, // I-include pud ni
+        };
+      }).toList();
+
+      // I-save sa cache
+      _cachedQuizHistory = quizHistory;
+
+      debugPrint('Loaded ${quizHistory.length} quiz history records');
+      return quizHistory;
+    } catch (e) {
+      debugPrint('Error loading quiz history: $e');
+      return [];
+    }
+  }
+
+  // BAG-O: Method para mag-delete ng SPECIFIC quiz result LANG
+  Future<void> deleteQuizResult(String quizId) async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // I-ensure nga string ang quizId ug trim any whitespace
+      final cleanQuizId = quizId.toString().trim();
+
+      debugPrint(
+        'Attempting to delete quiz with ID: $cleanQuizId for user: $userId',
+      );
+      debugPrint('Quiz ID type: ${cleanQuizId.runtimeType}');
+
+      // IMPORTANTE: I-try pag-query first kung existing ba ang quiz
+      final existingQuiz = await _supabase
+          .from('quiz_history')
+          .select('id, category_name')
+          .eq('id', cleanQuizId)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      debugPrint('Existing quiz check: $existingQuiz');
+
+      if (existingQuiz == null) {
+        throw Exception(
+          'Quiz not found or you do not have permission to delete it',
+        );
+      }
+
+      // Kung naa, i-delete na
+      final response = await _supabase
+          .from('quiz_history')
+          .delete()
+          .eq('id', cleanQuizId)
+          .eq('user_id', userId)
+          .select();
+
+      debugPrint('Delete response: $response');
+      debugPrint('Successfully deleted quiz: ${existingQuiz['category_name']}');
+
+      // I-clear ang entire cache para ma-reload fresh data
+      _cachedQuizHistory = null;
+
+      // I-notify ang listeners nga nay changes
+      notifyListeners();
+
+      // I-reload ang quiz history para ma-update ang cache
+      await getQuizHistory();
     } catch (e) {
       debugPrint('Error deleting quiz result: $e');
       rethrow;
     }
   }
 
-  // I-get ang quiz history (same as before)
-  Future<List<Map<String, dynamic>>> getQuizHistory() async {
-    try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) return [];
-
-      final response = await _supabase
-          .from('quiz_history')
-          .select()
-          .eq('user_id', userId)
-          .order('completed_at', ascending: false);
-
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      debugPrint('Error getting quiz history: $e');
-      return [];
-    }
+  // Method para i-clear ang cache (gamiton after delete)
+  void clearQuizHistoryCache() {
+    _cachedQuizHistory = null;
+    notifyListeners();
   }
 
   // I-mark ang category as completed
@@ -184,15 +264,12 @@ class ProfileService extends ChangeNotifier {
       if (userId == null) throw Exception('User not logged in');
 
       // I-use ang upsert with onConflict parameter para i-handle ang duplicate
-      await _supabase.from('completed_categories').upsert(
-        {
-          'user_id': userId,
-          'category_id': categoryId,
-          'completed_at': DateTime.now().toIso8601String(),
-        },
-        onConflict: 'user_id,category_id',
-      );
-      
+      await _supabase.from('completed_categories').upsert({
+        'user_id': userId,
+        'category_id': categoryId,
+        'completed_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'user_id,category_id');
+
       debugPrint('Category $categoryId na-mark/update as completed');
     } catch (e) {
       debugPrint('Error marking category as completed: $e');
@@ -247,9 +324,9 @@ class ProfileService extends ChangeNotifier {
         'is_passing': isPassing,
         'completed_at': DateTime.now().toIso8601String(),
       });
-      
+
       debugPrint('Quiz history saved successfully');
-      
+
       // I-reload ang recent activity after saving
       await loadRecentActivity();
     } catch (e) {
@@ -327,13 +404,16 @@ class ProfileService extends ChangeNotifier {
         await _supabase
             .from('user_stats')
             .update({
-              'challenges_completed': (existing['challenges_completed'] ?? 0) + 1,
+              'challenges_completed':
+                  (existing['challenges_completed'] ?? 0) + 1,
             })
             .eq('user_id', userId);
         _challengesCompleted = (existing['challenges_completed'] ?? 0) + 1;
       }
 
-      debugPrint('Challenges updated successfully! New total: $_challengesCompleted');
+      debugPrint(
+        'Challenges updated successfully! New total: $_challengesCompleted',
+      );
       notifyListeners();
     } catch (e) {
       debugPrint('Error adding completed challenge: $e');
