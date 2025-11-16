@@ -86,35 +86,6 @@ class _LoginPageState extends State<LoginPage> {
         child: SafeArea(
           child: Stack(
             children: [
-              // Back button
-              Positioned(
-                top: 16,
-                left: 16,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.arrow_back_ios_new,
-                      color: topTextColor,
-                      size: 24,
-                    ),
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/landing');
-                    },
-                  ),
-                ),
-              ),
-
               // Login form
               Center(
                 child: SingleChildScrollView(
@@ -127,8 +98,8 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       // App icon - white sa taas
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: 160,
+                        height: 160,
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.25),
                           shape: BoxShape.circle,
@@ -140,10 +111,24 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ],
                         ),
-                        child: Icon(
-                          Icons.eco,
-                          size: 45,
-                          color: isDark ? AppTheme.lightGreen : topTextColor,
+                        // I-clip para makuha ang circular shape
+                        child: ClipOval(
+                          child: Padding(
+                            padding: const EdgeInsets.all(
+                              4,
+                            ), // Spacing sa sulod
+                            child: Image.asset(
+                              'assets/images/logo.png', // Imong logo diri
+                              fit: BoxFit.contain, // Para dili ma-crop ang logo
+                              // Optional: I-apply ang color tint para mu-match sa theme
+                              color: isDark
+                                  ? AppTheme.lightGreen.withOpacity(0.9)
+                                  : null,
+                              colorBlendMode: isDark
+                                  ? BlendMode.modulate
+                                  : null,
+                            ),
+                          ),
                         ),
                       ),
 
