@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:aigrove/services/profile_service.dart';
 import 'package:aigrove/services/user_service.dart';
 import 'package:flutter/material.dart';
@@ -85,9 +87,9 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       debugPrint("Error uploading image: $e");
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sa pag-upload: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error sa pag-upload: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -97,10 +99,14 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     // I-get ang current theme brightness
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50;
+    final backgroundColor = isDarkMode
+        ? Colors.grey.shade900
+        : Colors.grey.shade50;
     final cardColor = isDarkMode ? Colors.grey.shade800 : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black87;
-    final subtitleColor = isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700;
+    final subtitleColor = isDarkMode
+        ? Colors.grey.shade400
+        : Colors.grey.shade700;
 
     return SafeArea(
       top: true,
@@ -112,364 +118,350 @@ class _ProfilePageState extends State<ProfilePage> {
               return const Center(child: CircularProgressIndicator());
             }
 
-            return Column(
-              children: [
-                // Fixed Upper Part - Profile Header ug Stats with gradient and border radius
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: isDarkMode 
-                        ? [
-                            Colors.green.shade900,
-                            Colors.green.shade800,
-                            Colors.green.shade700,
-                          ]
-                        : [
-                            Colors.green.shade600,
-                            Colors.green.shade700,
-                            Colors.green.shade800,
-                          ],
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(30),
-                      bottomRight: Radius.circular(30),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        // ignore: deprecated_member_use
-                        color: Colors.black.withOpacity(0.1),
-                        spreadRadius: 2,
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Profile Header
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          children: [
-                            // Back button
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                              onPressed: () => Navigator.pop(context),
-                            ),
-                            const Spacer(),
-                          ],
-                        ),
-                      ),
-
-                      // Profile Picture ug User Info
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Row(
-                          children: [
-                            // Profile Picture
-                            Stack(
-                              alignment: Alignment.bottomRight,
-                              children: [
-                                Container(
-                                  width: 100,
-                                  height: 100,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 4,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        // ignore: deprecated_member_use
-                                        color: Colors.black.withOpacity(0.2),
-                                        spreadRadius: 2,
-                                        blurRadius: 8,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Builder(
-                                    builder: (context) {
-                                      final String? avatarUrl = userService.avatarUrl;
-
-                                      if (avatarUrl != null && avatarUrl.isNotEmpty) {
-                                        return CircleAvatar(
-                                          radius: 50,
-                                          backgroundColor: Colors.grey[300],
-                                          backgroundImage: NetworkImage(avatarUrl),
-                                          onBackgroundImageError: (e, st) {
-                                            debugPrint("Failed to load image: $e");
-                                          },
-                                        );
-                                      } else {
-                                        return const CircleAvatar(
-                                          radius: 50,
-                                          backgroundColor: Colors.grey,
-                                          child: Icon(
-                                            Icons.person,
-                                            size: 50,
-                                            color: Colors.white,
-                                          ),
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                                FloatingActionButton.small(
-                                  onPressed: _pickImage,
-                                  backgroundColor: Colors.green.shade600,
-                                  elevation: 4,
-                                  child: const Icon(Icons.camera_alt, size: 16),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(width: 16),
-                            // User Info
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    userService.userName,
-                                    style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      shadows: [
-                                        Shadow(
-                                          color: Colors.black26,
-                                          offset: Offset(0, 2),
-                                          blurRadius: 4,
-                                        ),
-                                      ],
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    userService.userEmail,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                      shadows: [
-                                        Shadow(
-                                          color: Colors.black26,
-                                          offset: Offset(0, 1),
-                                          blurRadius: 2,
-                                        ),
-                                      ],
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Stats Row
-                      Container(
-                        margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          color: cardColor,
-                          boxShadow: [
-                            BoxShadow(
-                              // ignore: deprecated_member_use
-                              color: Colors.black.withOpacity(0.15),
-                              spreadRadius: 2,
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildStatColumn(
-                              'Total Scans',
-                              Icons.qr_code_scanner,
-                              Colors.green,
-                              textColor,
-                            ),
-                            Container(
-                              height: 50,
-                              width: 2,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: isDarkMode 
-                                    ? [Colors.grey.shade700, Colors.grey.shade600]
-                                    : [Colors.grey.shade300, Colors.grey.shade400],
-                                ),
-                              ),
-                            ),
-                            _buildStatColumn(
-                              'Challenges',
-                              Icons.emoji_events,
-                              Colors.amber,
-                              textColor,
-                            ),
-                            Container(
-                              height: 50,
-                              width: 2,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: isDarkMode 
-                                    ? [Colors.grey.shade700, Colors.grey.shade600]
-                                    : [Colors.grey.shade300, Colors.grey.shade400],
-                                ),
-                              ),
-                            ),
-                            _buildStatColumn(
-                              'Points',
-                              Icons.stars,
-                              Colors.blue,
-                              textColor,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // I-add ang spacing between profile ug recent activity
-                const SizedBox(height: 20),
-
-                // Scrollable Recent Activity Part - Ani lang ang ma-scroll
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _loadAllProfileData,
+            return RefreshIndicator(
+              onRefresh: _loadAllProfileData,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // Profile Header - Minimalist design
+                  SliverToBoxAdapter(
                     child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: isDarkMode
+                              ? [Colors.green.shade800, Colors.green.shade900]
+                              : [Colors.green.shade600, Colors.green.shade700],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            // ignore: deprecated_member_use
-                            color: Colors.black.withOpacity(0.08),
-                            spreadRadius: 1,
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                            color:
+                                (isDarkMode
+                                        ? Colors.green.shade900
+                                        : Colors.green.shade600)
+                                    .withOpacity(0.3),
+                            spreadRadius: 0,
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          // Back button sa top
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.arrow_back_ios_new,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Profile Picture - Mas dako ug elevated
+                          Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      spreadRadius: 0,
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: Builder(
+                                  builder: (context) {
+                                    final String? avatarUrl =
+                                        userService.avatarUrl;
+
+                                    if (avatarUrl != null &&
+                                        avatarUrl.isNotEmpty) {
+                                      return CircleAvatar(
+                                        radius: 60,
+                                        backgroundColor: Colors.grey[300],
+                                        backgroundImage: NetworkImage(
+                                          avatarUrl,
+                                        ),
+                                        onBackgroundImageError: (e, st) {
+                                          debugPrint(
+                                            "Failed to load image: $e",
+                                          );
+                                        },
+                                      );
+                                    } else {
+                                      return CircleAvatar(
+                                        radius: 60,
+                                        backgroundColor: Colors.white
+                                            .withOpacity(0.3),
+                                        child: const Icon(
+                                          Icons.person,
+                                          size: 60,
+                                          color: Colors.white,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      spreadRadius: 0,
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  onPressed: _pickImage,
+                                  icon: Icon(
+                                    Icons.camera_alt,
+                                    color: isDarkMode
+                                        ? Colors.green.shade700
+                                        : Colors.green.shade600,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // User Info - Clean typography
+                          Text(
+                            userService.userName,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              userService.userEmail,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Stats Card - Separated with modern card design
+                  SliverToBoxAdapter(
+                    child: Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(
+                              isDarkMode ? 0.3 : 0.08,
+                            ),
+                            spreadRadius: 0,
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Recent Activity Header (fixed sa top sa container)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Recent Activity',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: textColor,
-                                  ),
-                                ),
-                                // Uncomment ni kung gusto nimo ang View All button
-                                // TextButton(
-                                //   onPressed: () {
-                                //     Navigator.pushNamed(context, '/history');
-                                //   },
-                                //   child: Text(
-                                //     'View All',
-                                //     style: TextStyle(
-                                //       color: isDarkMode ? Colors.green.shade300 : Colors.green.shade700,
-                                //       fontWeight: FontWeight.w600,
-                                //     ),
-                                //   ),
-                                // ),
-                              ],
+                          Text(
+                            'Statistics',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                              letterSpacing: -0.5,
                             ),
                           ),
-
-                          // Scrollable Activity List - Ani lang ang ma-scroll
-                          Expanded(
-                            child: Consumer<ProfileService>(
-                              builder: (context, profileService, child) {
-                                final activities = profileService.recentActivity;
-
-                                if (activities.isEmpty) {
-                                  return Center(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(32.0),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.history,
-                                            size: 64,
-                                            // ignore: deprecated_member_use
-                                            color: subtitleColor.withOpacity(0.5),
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            'No recent activity',
-                                            style: TextStyle(
-                                              color: subtitleColor,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Your quiz history will appear here',
-                                            style: TextStyle(
-                                              // ignore: deprecated_member_use
-                                              color: subtitleColor.withOpacity(0.7),
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                return ListView.separated(
-                                  padding: const EdgeInsets.only(bottom: 16, top: 8),
-                                  itemCount: activities.length,
-                                  separatorBuilder: (context, index) => Divider(
-                                    height: 1,
-                                    indent: 70,
-                                    color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
-                                  ),
-                                  itemBuilder: (context, index) {
-                                    final activity = activities[index];
-                                    return _buildActivityItem(
-                                      activity,
-                                      isDarkMode,
-                                      textColor,
-                                      subtitleColor,
-                                    );
-                                  },
-                                );
-                              },
-                            ),
+                          const SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildModernStatColumn(
+                                'Total Scans',
+                                Icons.qr_code_scanner_rounded,
+                                isDarkMode
+                                    ? Colors.green.shade400
+                                    : Colors.green.shade600,
+                                textColor,
+                                subtitleColor,
+                                isDarkMode,
+                              ),
+                              _buildStatDivider(isDarkMode),
+                              _buildModernStatColumn(
+                                'Challenges',
+                                Icons.emoji_events_rounded,
+                                isDarkMode
+                                    ? Colors.amber.shade400
+                                    : Colors.amber.shade600,
+                                textColor,
+                                subtitleColor,
+                                isDarkMode,
+                              ),
+                              _buildStatDivider(isDarkMode),
+                              _buildModernStatColumn(
+                                'Points',
+                                Icons.stars_rounded,
+                                isDarkMode
+                                    ? Colors.blue.shade400
+                                    : Colors.blue.shade600,
+                                textColor,
+                                subtitleColor,
+                                isDarkMode,
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20), // Bottom spacing
-              ],
+
+                  // Recent Activity Header
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(32, 8, 32, 16),
+                      child: Text(
+                        'Recent Activity',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Recent Activity List
+                  Consumer<ProfileService>(
+                    builder: (context, profileService, child) {
+                      final activities = profileService.recentActivity;
+
+                      if (activities.isEmpty) {
+                        return SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(24),
+                                    decoration: BoxDecoration(
+                                      color: isDarkMode
+                                          ? Colors.grey.shade800
+                                          : Colors.grey.shade100,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.history_rounded,
+                                      size: 64,
+                                      color: subtitleColor.withOpacity(0.5),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    'No recent activity',
+                                    style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Your quiz history will appear here',
+                                    style: TextStyle(
+                                      color: subtitleColor.withOpacity(0.7),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      return SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final activity = activities[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildModernActivityItem(
+                                activity,
+                                isDarkMode,
+                                textColor,
+                                subtitleColor,
+                                cardColor,
+                              ),
+                            );
+                          }, childCount: activities.length),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // Bottom spacing
+                  const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                ],
+              ),
             );
           },
         ),
@@ -477,12 +469,32 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // I-build ang activity item with theme support
-  Widget _buildActivityItem(
+  // Modern stat divider
+  Widget _buildStatDivider(bool isDarkMode) {
+    return Container(
+      height: 60,
+      width: 1.5,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+            Colors.transparent,
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Modern activity item with card design
+  Widget _buildModernActivityItem(
     Map<String, dynamic> activity,
     bool isDarkMode,
     Color textColor,
     Color subtitleColor,
+    Color cardColor,
   ) {
     final activityType = activity['activity_type'] as String? ?? 'unknown';
     final title = activity['title'] as String? ?? 'No title';
@@ -490,7 +502,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
     DateTime createdAt;
     try {
-      createdAt = DateTime.parse(activity['created_at'] ?? DateTime.now().toIso8601String());
+      createdAt = DateTime.parse(
+        activity['created_at'] ?? DateTime.now().toIso8601String(),
+      );
     } catch (e) {
       createdAt = DateTime.now();
     }
@@ -503,64 +517,87 @@ class _ProfilePageState extends State<ProfilePage> {
 
     switch (activityType) {
       case 'quiz':
-        icon = Icons.quiz;
-        iconColor = isDarkMode ? Colors.blue.shade300 : Colors.blue.shade600;
+        icon = Icons.quiz_rounded;
+        iconColor = isDarkMode ? Colors.blue.shade400 : Colors.blue.shade600;
         break;
       case 'scan':
-        icon = Icons.camera_alt;
-        iconColor = isDarkMode ? Colors.green.shade300 : Colors.green.shade600;
+        icon = Icons.camera_alt_rounded;
+        iconColor = isDarkMode ? Colors.green.shade400 : Colors.green.shade600;
         break;
       case 'achievement':
-        icon = Icons.emoji_events;
-        iconColor = isDarkMode ? Colors.amber.shade300 : Colors.amber.shade700;
+        icon = Icons.emoji_events_rounded;
+        iconColor = isDarkMode ? Colors.amber.shade400 : Colors.amber.shade600;
         break;
       default:
-        icon = Icons.info;
-        iconColor = isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600;
+        icon = Icons.info_rounded;
+        iconColor = isDarkMode ? Colors.grey.shade500 : Colors.grey.shade600;
     }
 
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          // ignore: deprecated_member_use
-          color: iconColor.withOpacity(isDarkMode ? 0.2 : 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: iconColor, size: 24),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
-          color: textColor,
-        ),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (description != null && description.isNotEmpty)
-            Text(
-              description,
-              style: TextStyle(
-                fontSize: 12,
-                color: subtitleColor,
-              ),
-            ),
-          const SizedBox(height: 2),
-          Text(
-            timeAgo,
-            style: TextStyle(
-              fontSize: 11,
-              // ignore: deprecated_member_use
-              color: subtitleColor.withOpacity(0.7),
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
+            spreadRadius: 0,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: iconColor, size: 24),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            color: textColor,
+            letterSpacing: -0.2,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (description != null && description.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(fontSize: 13, color: subtitleColor),
+              ),
+            ],
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(
+                  Icons.access_time_rounded,
+                  size: 12,
+                  color: subtitleColor.withOpacity(0.6),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  timeAgo,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: subtitleColor.withOpacity(0.8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -582,8 +619,15 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // I-build ang stat column with theme support
-  Widget _buildStatColumn(String label, IconData icon, Color color, Color textColor) {
+  // Modern stat column with improved visual hierarchy
+  Widget _buildModernStatColumn(
+    String label,
+    IconData icon,
+    Color color,
+    Color textColor,
+    Color subtitleColor,
+    bool isDarkMode,
+  ) {
     return Consumer<ProfileService>(
       builder: (context, profileService, child) {
         String displayValue = '0';
@@ -598,30 +642,41 @@ class _ProfilePageState extends State<ProfilePage> {
             displayValue = profileService.points.toString();
             break;
         }
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 28, color: color),
-            const SizedBox(height: 6),
-            Text(
-              displayValue,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: color,
+        return Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 28, color: color),
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                // ignore: deprecated_member_use
-                color: textColor.withOpacity(0.7),
-                fontWeight: FontWeight.w500,
+              const SizedBox(height: 12),
+              Text(
+                displayValue,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  letterSpacing: -0.5,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: subtitleColor,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         );
       },
     );
