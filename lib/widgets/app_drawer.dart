@@ -144,7 +144,7 @@ class AppDrawer extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: () => _handleLogout(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade600,
+                        backgroundColor: const Color.fromARGB(255, 34, 163, 81),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -297,7 +297,7 @@ void _handleLogout(BuildContext context) async {
     builder: (dialogContext) {
       return AlertDialog(
         title: const Text('Confirm Logout'),
-        content: const Text('Sigurado ka ba na gusto mo mag-logout?'),
+        content: const Text('Are you sure you want to logout?'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         actions: [
           TextButton(
@@ -307,10 +307,10 @@ void _handleLogout(BuildContext context) async {
           ElevatedButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: const Color.fromARGB(255, 34, 163, 81),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Logout'),
+            child: const Text('Yes'),
           ),
         ],
       );

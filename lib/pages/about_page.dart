@@ -294,6 +294,7 @@ class AboutPage extends StatelessWidget {
             // ignore: deprecated_member_use
             backgroundColor: Theme.of(
               context,
+            // ignore: deprecated_member_use
             ).colorScheme.primary.withOpacity(0.12),
             child: Icon(icon, color: Theme.of(context).colorScheme.primary),
           ),
