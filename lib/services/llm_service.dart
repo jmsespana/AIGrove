@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Service para sa Llama AI integration via Groq API
 /// Gamit ni ang llama-3.3-70b-versatile model
@@ -19,16 +20,12 @@ class LLMService {
   static const Duration _cacheDuration = Duration(hours: 24);
 
   // Hardcoded API key
-late final String _apiKey;
+  final String _apiKey =
+      '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';
 
   LLMService() {
-    _apiKey = dotenv.env['GROQ_API_KEY'] ?? '';
-    if (_apiKey.isEmpty) {
-      debugPrint('‚ö†Ô∏è GROQ_API_KEY wala sa .env file!');
-    } else {
-      debugPrint('Ì¥ë Groq API Key initialized: ${_apiKey.substring(0, 20)}...');
-    } 
-   }
+    debugPrint('üîë Groq API Key initialized: ${_apiKey.substring(0, 20)}...');
+  }
 
   Future<String> getDailyEcoTip() async {
     // ‚≠ê Check cache una before mag-API call para makatipid
