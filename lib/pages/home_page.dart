@@ -1,374 +1,579 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-// I-add ang shared AppTheme para magamit ang parehas na background
 import '../theme/app_theme.dart';
+import '../services/llm_service.dart'; // I-add ang LLM service
+import 'chatbot_page.dart'; // ADD THIS
 
 // Helper para i-convert opacity (0..1) papuntang alpha (0..255)
 int _alpha(double opacity) => (opacity * 255).round();
 
-class HomePage extends StatelessWidget {
+// CHANGED: StatelessWidget -> StatefulWidget para sa state management
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // removed unused 'theme' variable
+  State<HomePage> createState() => _HomePageState();
+}
 
-    // compute bottom padding to account for device insets (SafeArea) and add a small buffer
-    final double dynamicBottomPadding = MediaQuery.of(context).viewPadding.bottom + 24.0;
+// State class para sa dynamic eco tips
+class _HomePageState extends State<HomePage> {
+  final LLMService _llmService = LLMService();
+  String _dailyTip = '';
+  bool _isLoadingTip = true;
+  DateTime? _lastRefreshTime; // Track kada kanus-a nag-refresh
+  static const _refreshCooldown = Duration(minutes: 5); // 5 minutes cooldown
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDailyEcoTip(); // I-load ang daily tip pag mag-load ang page
+  }
+
+  // Method para kuhaon ang daily eco tip gikan sa AI
+  Future<void> _loadDailyEcoTip() async {
+    // ⭐ Check kung na-refresh na recently
+    if (_lastRefreshTime != null) {
+      final timeSinceLastRefresh = DateTime.now().difference(_lastRefreshTime!);
+      if (timeSinceLastRefresh < _refreshCooldown) {
+        final remainingTime = _refreshCooldown - timeSinceLastRefresh;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Please wait ${remainingTime.inMinutes} minute(s) before refreshing again',
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return; // Dili mag-proceed kung bag-o pa nag-refresh
+      }
+    }
+
+    setState(() => _isLoadingTip = true);
+
+    try {
+      final tip = await _llmService.getDailyEcoTip();
+
+      if (!mounted) return;
+
+      setState(() {
+        _dailyTip = tip;
+        _isLoadingTip = false;
+        _lastRefreshTime = DateTime.now(); // Update last refresh time
+      });
+    } catch (e) {
+      // Fallback message kung mag-error ang AI
+      if (!mounted) return;
+
+      setState(() {
+        _dailyTip =
+            '🌱 Mangroves protect our coastlines! Plant a tree today and help preserve our environment.';
+        _isLoadingTip = false;
+      });
+
+      // ⭐ Show user-friendly error message
+      if (e.toString().contains('429')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Rate limit reached. Please try again later.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+
+      debugPrint('Error loading daily tip: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double dynamicBottomPadding =
+        MediaQuery.of(context).viewPadding.bottom + 24.0;
 
     // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async => false,
-       child: Scaffold(
-        backgroundColor: Colors.transparent, // para makita ang custom bg
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
         body: Container(
-          // Gamit ang same theme-aware gradient gaya ng iba pang pages
           decoration: AppTheme.getPageGradient(context),
           child: SafeArea(
-            child: SingleChildScrollView(
-              // use dynamic bottom padding to avoid tiny overflow (e.g. 2.0 pixels)
-              padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, dynamicBottomPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Dashboard welcome header (Tagalog/Bisaya comments ok)
-                  const Text(
-                    'Welcome to AIgrove Dashboard',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Discover how mangroves protect, sustain, and enrich our environment.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: const Color.fromARGB(255, 68, 68, 68),
-                      fontWeight: FontWeight.w500,
+            // Pull to refresh functionality
+            child: RefreshIndicator(
+              onRefresh: _loadDailyEcoTip,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  16.0,
+                  16.0,
+                  16.0,
+                  dynamicBottomPadding,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Dashboard welcome header
+                    const Text(
+                      'Welcome to AIgrove Dashboard',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Discover how mangroves protect, sustain, and enrich our environment.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: const Color.fromARGB(255, 68, 68, 68),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
 
-                  // Environmental Impact Cards - Horizontal scrollable
-                  const Text(
-                    'Environmental Impact',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: const [
-                        EnvironmentalImpactCard(
-                          title: 'Carbon Reduction',
-                          value: '25.3',
-                          unit: 'tons CO₂/ha/yr',
-                          description: 'Annual CO₂ removed per hectare (approx.)',
-                          icon: Icons.co2,
-                          color: Colors.teal,
-                          bgPattern: 'carbon',
-                          info: '''
+                    // ⭐ NEW: AI Daily Tip Card
+                    _buildDailyTipCard(),
+
+                    const SizedBox(height: 28),
+
+                    // Environmental Impact Cards - Horizontal scrollable
+                    const Text(
+                      'Environmental Impact',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: const [
+                          EnvironmentalImpactCard(
+                            title: 'Carbon Reduction',
+                            value: '25.3',
+                            unit: 'tons CO₂/ha/yr',
+                            description:
+                                'Annual CO₂ removed per hectare (approx.)',
+                            icon: Icons.co2,
+                            color: Colors.teal,
+                            bgPattern: 'carbon',
+                            info: '''
 Quick facts:
 - Estimated removal: ~25.3 tons CO₂ per hectare each year.
 - Where it matters: Healthy, intact mangrove forests and restored sites.
 - How you can help: Protect existing mangroves, support restoration, avoid clearing.
 Takeaway: More mangroves = less CO₂ in the air.''',
-                        ),
-                        SizedBox(width: 16),
-                        EnvironmentalImpactCard(
-                          title: 'Marine Expansion Zones',
-                          value: '12.5',
-                          unit: 'km²/year',
-                          description: 'Potential suitable area for new/restored mangroves',
-                          icon: Icons.water,
-                          color: Colors.indigo,
-                          bgPattern: 'marine',
-                          info: '''
+                          ),
+                          SizedBox(width: 16),
+                          EnvironmentalImpactCard(
+                            title: 'Marine Expansion Zones',
+                            value: '12.5',
+                            unit: 'km²/year',
+                            description:
+                                'Potential suitable area for new/restored mangroves',
+                            icon: Icons.water,
+                            color: Colors.indigo,
+                            bgPattern: 'marine',
+                            info: '''
 Quick facts:
 - Potential area: Up to ~12.5 km² per year in suitable coastlines.
 - Suitable site signs: Gentle slope, correct salinity, natural tidal flow, low pollution.
 - Simple actions: Map sites, restore hydrology, plant native seedlings, monitor results.
 Note: Expert assessment needed before large-scale planting.''',
-                        ),
-                        SizedBox(width: 16),
-                        EnvironmentalImpactCard(
-                          title: 'Coastal Protection',
-                          value: '70',
-                          unit: '% wave energy',
-                          description: 'Estimated reduction in wave energy from mangrove belts',
-                          icon: Icons.waves,
-                          color: Colors.blue,
-                          bgPattern: 'waves',
-                          info: '''
+                          ),
+                          SizedBox(width: 16),
+                          EnvironmentalImpactCard(
+                            title: 'Coastal Protection',
+                            value: '70',
+                            unit: '% wave energy',
+                            description:
+                                'Estimated reduction in wave energy from mangrove belts',
+                            icon: Icons.waves,
+                            color: Colors.blue,
+                            bgPattern: 'waves',
+                            info: '''
 Quick facts:
 - Wave energy reduction: Up to ~70% with a healthy mangrove belt.
 - Benefits: Less coastal erosion, lower flood risk, sediment trapping and shore stabilization.
 - How it works: Roots and trunks slow waves and capture sediment.
 Practical tip: Keep buffer zones and avoid removing mangroves near vulnerable coasts.''',
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  // Province Statistics Section
-                  const Text(
-                    'Provincial Statistics',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  GridView.count(
-                     shrinkWrap: true,
-                     physics: const NeverScrollableScrollPhysics(),
-                     crossAxisCount: 2,
-                     mainAxisSpacing: 16,
-                     crossAxisSpacing: 16,
-                     childAspectRatio: 0.85,
-                     // remove 'const' so runtime map/list literals (speciesDetails) are allowed
-                     children: [
-                       ProvinceCard(
-                         province: 'Agusan del Norte',
-                         treeCount: 5,
-                         color: Color.fromARGB(255, 191, 160, 5),
-                         speciesByYear: {'2021': 5},
-                         speciesDetails: {
-                           '2021': [
-                             'Avicennia officinalis',
-                             'Ceriops tagal',
-                             'Rhizophora mucronata',
-                             'Sonneratia alba',
-                             'Sonneratia caseolaris',
-                           ],
-                         },
-                       ),
-                       ProvinceCard(
-                         province: 'Surigao del Sur',
-                         treeCount: 15,
-                         color: Color.fromARGB(255, 126, 202, 130),
-                         speciesByYear: {'2022': 8, '2021': 7},
-                         speciesDetails: {
-                           '2021': [
-                             'Bruguiera gymnorhiza',
-                             'Lumnitzera littorea',
-                             'Nypa fruticans',
-                             'Rhizophora apiculata',
-                             'Rhizophora mucronata',
-                             'Sonneratia alba',
-                             'Xylocarpus granatum',
-                           ],
-                           '2022': [
-                             'Avicennia marina',
-                             'Bruguiera gymnorhiza',
-                             'Ceriops tagal',
-                             'Rhizophora apiculata',
-                             'Rhizophora mucronata',
-                             'Sonneratia alba',
-                             'Sonneratia ovata',
-                             'Xylocarpus granatum',
-                           ],
-                         },
-                       ),
-                       ProvinceCard(
-                         province: 'Surigao del Norte',
-                         // total reports = sum of species counts per year (13+13+13)
-                         treeCount: 39,
-                         color: Color.fromARGB(255, 40, 167, 33),
-                         speciesByYear: {
-                           '2022': 13,
-                           '2021': 13,
-                           '2020': 13,
-                         },
-                         speciesDetails: {
-                           '2020': [
-                             'Avicennia marina',
-                             'Avicennia officinalis',
-                             'Bruguiera cylindrica',
-                             'Bruguiera gymnorhiza',
-                             'Ceriops tagal',
-                             'Excoecaria agallocha',
-                             'Lumnitzera littorea',
-                             'Nypa fruticans',
-                             'Rhizophora apiculata',
-                             'Rhizophora mucronata',
-                             'Rhizophora stylosa',
-                             'Sonneratia alba',
-                             'Xylocarpus granatum',
-                           ],
-                           '2021': [
-                             'Avicennia marina',
-                             'Avicennia officinalis',
-                             'Bruguiera cylindrica',
-                             'Bruguiera gymnorhiza',
-                             'Ceriops tagal',
-                             'Lumnitzera littorea',
-                             'Nypa fruticans',
-                             'Rhizophora apiculata',
-                             'Rhizophora mucronata',
-                             'Rhizophora stylosa',
-                             'Sonneratia alba',
-                             'Sonneratia ovata',
-                             'Xylocarpus granatum',
-                           ],
-                           '2022': [
-                             'Avicennia marina',
-                             'Avicennia officinalis',
-                             'Bruguiera cylindrica',
-                             'Bruguiera gymnorhiza',
-                             'Ceriops tagal',
-                             'Lumnitzera littorea',
-                             'Nypa fruticans',
-                             'Rhizophora apiculata',
-                             'Rhizophora mucronata',
-                             'Rhizophora stylosa',
-                             'Sonneratia alba',
-                             'Sonneratia ovata',
-                             'Xylocarpus granatum',
-                           ],
-                         },
-                       ),
-                       ProvinceCard(
-                         province: 'Dinagat Islands',
-                         treeCount: 10,
-                         color: Color.fromARGB(255, 52, 152, 219),
-                         speciesByYear: {'2021': 10},
-                         speciesDetails: {
-                           '2021': [
-                             'Avicennia officinalis',
-                             'Ceriops tagal',
-                             'Lumnitzera littorea',
-                             'Nypa fruticans',
-                             'Rhizophora apiculata',
-                             'Rhizophora mucronata',
-                             'Rhizophora stylosa',
-                             'Sonneratia alba',
-                             'Sonneratia caseolaris',
-                             'Xylocarpus granatum',
-                           ],
-                         },
-                       ),
-                     ],
-                   ),
-
-                  const SizedBox(height: 32),
-
-                  // Chart Title with icon
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.green.shade700, Colors.teal.shade600],
                           ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.trending_up,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Mangrove Species Trends',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Track species diversity across Caraga Region over time',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Improved Line Chart Container
-                  Container(
-                    height: 350, // Increased height for better visibility
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.white,
-                          Colors.green.shade50.withAlpha(_alpha(0.3)),
-                          Colors.blue.shade50.withAlpha(_alpha(0.2)),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.green.shade300.withAlpha(_alpha(0.4)),
-                          spreadRadius: 0,
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withAlpha(_alpha(0.08)),
-                          spreadRadius: 0,
-                          blurRadius: 30,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                      border: Border.all(
-                        color: Colors.green.shade100.withAlpha(_alpha(0.6)),
-                        width: 2,
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // Province Statistics Section
+                    const Text(
+                      'Provincial Statistics',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    child: const MangroveSpeciesChart(),
-                  ),
+                    const SizedBox(height: 12),
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 0.85,
+                      // remove 'const' so runtime map/list literals (speciesDetails) are allowed
+                      children: [
+                        ProvinceCard(
+                          province: 'Agusan del Norte',
+                          treeCount: 5,
+                          color: Color.fromARGB(255, 191, 160, 5),
+                          speciesByYear: {'2021': 5},
+                          speciesDetails: {
+                            '2021': [
+                              'Avicennia officinalis',
+                              'Ceriops tagal',
+                              'Rhizophora mucronata',
+                              'Sonneratia alba',
+                              'Sonneratia caseolaris',
+                            ],
+                          },
+                        ),
+                        ProvinceCard(
+                          province: 'Surigao del Sur',
+                          treeCount: 15,
+                          color: Color.fromARGB(255, 126, 202, 130),
+                          speciesByYear: {'2022': 8, '2021': 7},
+                          speciesDetails: {
+                            '2021': [
+                              'Bruguiera gymnorhiza',
+                              'Lumnitzera littorea',
+                              'Nypa fruticans',
+                              'Rhizophora apiculata',
+                              'Rhizophora mucronata',
+                              'Sonneratia alba',
+                              'Xylocarpus granatum',
+                            ],
+                            '2022': [
+                              'Avicennia marina',
+                              'Bruguiera gymnorhiza',
+                              'Ceriops tagal',
+                              'Rhizophora apiculata',
+                              'Rhizophora mucronata',
+                              'Sonneratia alba',
+                              'Sonneratia ovata',
+                              'Xylocarpus granatum',
+                            ],
+                          },
+                        ),
+                        ProvinceCard(
+                          province: 'Surigao del Norte',
+                          // total reports = sum of species counts per year (13+13+13)
+                          treeCount: 39,
+                          color: Color.fromARGB(255, 40, 167, 33),
+                          speciesByYear: {'2022': 13, '2021': 13, '2020': 13},
+                          speciesDetails: {
+                            '2020': [
+                              'Avicennia marina',
+                              'Avicennia officinalis',
+                              'Bruguiera cylindrica',
+                              'Bruguiera gymnorhiza',
+                              'Ceriops tagal',
+                              'Excoecaria agallocha',
+                              'Lumnitzera littorea',
+                              'Nypa fruticans',
+                              'Rhizophora apiculata',
+                              'Rhizophora mucronata',
+                              'Rhizophora stylosa',
+                              'Sonneratia alba',
+                              'Xylocarpus granatum',
+                            ],
+                            '2021': [
+                              'Avicennia marina',
+                              'Avicennia officinalis',
+                              'Bruguiera cylindrica',
+                              'Bruguiera gymnorhiza',
+                              'Ceriops tagal',
+                              'Lumnitzera littorea',
+                              'Nypa fruticans',
+                              'Rhizophora apiculata',
+                              'Rhizophora mucronata',
+                              'Rhizophora stylosa',
+                              'Sonneratia alba',
+                              'Sonneratia ovata',
+                              'Xylocarpus granatum',
+                            ],
+                            '2022': [
+                              'Avicennia marina',
+                              'Avicennia officinalis',
+                              'Bruguiera cylindrica',
+                              'Bruguiera gymnorhiza',
+                              'Ceriops tagal',
+                              'Lumnitzera littorea',
+                              'Nypa fruticans',
+                              'Rhizophora apiculata',
+                              'Rhizophora mucronata',
+                              'Rhizophora stylosa',
+                              'Sonneratia alba',
+                              'Sonneratia ovata',
+                              'Xylocarpus granatum',
+                            ],
+                          },
+                        ),
+                        ProvinceCard(
+                          province: 'Dinagat Islands',
+                          treeCount: 10,
+                          color: Color.fromARGB(255, 52, 152, 219),
+                          speciesByYear: {'2021': 10},
+                          speciesDetails: {
+                            '2021': [
+                              'Avicennia officinalis',
+                              'Ceriops tagal',
+                              'Lumnitzera littorea',
+                              'Nypa fruticans',
+                              'Rhizophora apiculata',
+                              'Rhizophora mucronata',
+                              'Rhizophora stylosa',
+                              'Sonneratia alba',
+                              'Sonneratia caseolaris',
+                              'Xylocarpus granatum',
+                            ],
+                          },
+                        ),
+                      ],
+                    ),
 
-                  const SizedBox(height: 32),
-                  const Text(
-                    'Quick Actions',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ActionButton(
-                          title: 'Report New',
-                          icon: Icons.add_location_alt,
-                          color: Colors.green,
-                          onTap: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ActionButton(
-                          title: 'Education',
-                          icon: Icons.school,
-                          color: Colors.orange,
-                          onTap: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ActionButton(
-                          title: 'Initiatives',
-                          icon: Icons.eco,
-                          color: Colors.blue,
-                          onTap: () {},
-                        ),
-                      ),
-                    ],
-                  ),
+                    const SizedBox(height: 32),
 
-                  // small extra spacer so content never touches the bottom exactly (prevents tiny overflow)
-                  const SizedBox(height: 8),
-                ],
+                    // Chart Title with icon
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.green.shade700,
+                                Colors.teal.shade600,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.trending_up,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Mangrove Species Trends',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Track species diversity across Caraga Region over time',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Improved Line Chart Container
+                    Container(
+                      height: 350,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white,
+                            Colors.green.shade50.withAlpha(_alpha(0.3)),
+                            Colors.blue.shade50.withAlpha(_alpha(0.2)),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.green.shade300.withAlpha(_alpha(0.4)),
+                            spreadRadius: 0,
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withAlpha(_alpha(0.08)),
+                            spreadRadius: 0,
+                            blurRadius: 30,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: Colors.green.shade100.withAlpha(_alpha(0.6)),
+                          width: 2,
+                        ),
+                      ),
+                      child: const MangroveSpeciesChart(),
+                    ),
+
+                    const SizedBox(height: 8),
+                  ],
+                ),
               ),
             ),
           ),
         ),
+
+        // ⭐ ADD THIS: Floating Action Button para sa AI Chatbot
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ChatbotPage()),
+            );
+          },
+          backgroundColor: Colors.green.shade700,
+          icon: const Icon(Icons.chat_bubble, color: Colors.white),
+          label: const Text(
+            'AI Chat',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          elevation: 6,
+        ),
+      ),
+    );
+  }
+
+  // ⭐ NEW METHOD: Daily Tip Card widget
+  Widget _buildDailyTipCard() {
+    // Check kung pwede pa mag-refresh
+    final canRefresh =
+        _lastRefreshTime == null ||
+        DateTime.now().difference(_lastRefreshTime!) >= _refreshCooldown;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.teal.shade400, Colors.green.shade600],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withAlpha(_alpha(0.3)),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(_alpha(0.2)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.lightbulb,
+                  color: Colors.amber,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Daily Eco Tip',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.auto_awesome,
+                          color: Colors.amber.shade200,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Powered by Gemini AI',
+                          style: TextStyle(
+                            color: Colors.white.withAlpha(_alpha(0.9)),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Refresh button para sa new tip
+              IconButton(
+                icon: _isLoadingTip
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Icon(
+                        Icons.refresh,
+                        color: canRefresh
+                            ? Colors.white
+                            : Colors.white.withAlpha(_alpha(0.4)),
+                      ),
+                onPressed: (_isLoadingTip || !canRefresh)
+                    ? null
+                    : _loadDailyEcoTip,
+                tooltip: canRefresh ? 'Get new tip' : 'Please wait',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Tip content area
+          _isLoadingTip
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(color: Colors.white),
+                        SizedBox(height: 12),
+                        Text(
+                          'Generating eco tip...',
+                          style: TextStyle(color: Colors.white, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : Text(
+                  _dailyTip,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    height: 1.5,
+                  ),
+                ),
+        ],
       ),
     );
   }
@@ -383,7 +588,8 @@ class EnvironmentalImpactCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String bgPattern;
-  final String info; // additional short/expanded info shown under the main stats
+  final String
+  info; // additional short/expanded info shown under the main stats
 
   const EnvironmentalImpactCard({
     super.key,
@@ -403,10 +609,10 @@ class EnvironmentalImpactCard extends StatelessWidget {
     const double cardWidth = 200;
     // add a tiny buffer to prevent 2.0px rounding overflow on some devices
     const double cardHeight = 222;
- 
-     return Material(
-       color: Colors.transparent,
-       child: InkWell(
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         onTap: () {
           showDialog(
             context: context,
@@ -418,7 +624,10 @@ class EnvironmentalImpactCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('$value $unit', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      '$value $unit',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 8),
                     Text(description),
                     const SizedBox(height: 12),
@@ -427,7 +636,10 @@ class EnvironmentalImpactCard extends StatelessWidget {
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
               ],
             ),
           );
@@ -442,10 +654,7 @@ class EnvironmentalImpactCard extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  color.withAlpha(_alpha(0.8)),
-                  color,
-                ],
+                colors: [color.withAlpha(_alpha(0.8)), color],
               ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
@@ -459,48 +668,80 @@ class EnvironmentalImpactCard extends StatelessWidget {
             // clip background pattern so negative Positioned icons cannot overflow the card
             child: Stack(
               clipBehavior: Clip.hardEdge,
-               children: [
-                 _buildBackgroundPattern(bgPattern),
-                 Column(
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     Container(
-                       padding: const EdgeInsets.all(8),
-                       decoration: BoxDecoration(
-                         color: Colors.white.withAlpha(_alpha(0.2)),
-                         borderRadius: BorderRadius.circular(12),
-                       ),
-                       child: Icon(icon, color: Colors.white, size: 24),
-                     ),
-                     const SizedBox(height: 12),
-                     Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                     const SizedBox(height: 8),
-                     Row(
-                       children: [
-                         Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                         const SizedBox(width: 4),
-                         Expanded(child: Text(unit, style: TextStyle(color: Colors.white.withAlpha(_alpha(0.9)), fontSize: 12))),
-                       ],
-                     ),
-                     const SizedBox(height: 8),
-                     // short description inside the card
-                     Text(description, style: TextStyle(color: Colors.white.withAlpha(_alpha(0.9)), fontSize: 12)),
-                     const SizedBox(height: 8),
-                     // subtle preview of the expanded info (keeps card compact)
-                     if (info.isNotEmpty)
-                       Flexible(
-                         fit: FlexFit.loose,
-                         child: Text(
-                           // show a short preview inside the card (first line or so)
-                           info.split('\n').first,
-                           overflow: TextOverflow.ellipsis,
-                           maxLines: 3,
-                           style: TextStyle(color: Colors.white.withAlpha(_alpha(0.85)), fontSize: 11, height: 1.2),
-                         ),
-                       ),
-                   ],
-                 ),
-               ],
+              children: [
+                _buildBackgroundPattern(bgPattern),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(_alpha(0.2)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(icon, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          value,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            unit,
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(_alpha(0.9)),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // short description inside the card
+                    Text(
+                      description,
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(_alpha(0.9)),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // subtle preview of the expanded info (keeps card compact)
+                    if (info.isNotEmpty)
+                      Flexible(
+                        fit: FlexFit.loose,
+                        child: Text(
+                          // show a short preview inside the card (first line or so)
+                          info.split('\n').first,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 3,
+                          style: TextStyle(
+                            color: Colors.white.withAlpha(_alpha(0.85)),
+                            fontSize: 11,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
@@ -520,8 +761,16 @@ class EnvironmentalImpactCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Icon(Icons.co2, size: 40, color: Colors.white),
-                Row(children: [Icon(Icons.cloud, size: 30, color: Colors.white), Icon(Icons.air, size: 40, color: Colors.white)]),
-                Transform.rotate(angle: 0.2, child: Icon(Icons.eco, size: 50, color: Colors.white)),
+                Row(
+                  children: [
+                    Icon(Icons.cloud, size: 30, color: Colors.white),
+                    Icon(Icons.air, size: 40, color: Colors.white),
+                  ],
+                ),
+                Transform.rotate(
+                  angle: 0.2,
+                  child: Icon(Icons.eco, size: 50, color: Colors.white),
+                ),
               ],
             ),
           ),
@@ -538,7 +787,12 @@ class EnvironmentalImpactCard extends StatelessWidget {
                 Icon(Icons.waves, size: 40, color: Colors.white),
                 Icon(Icons.waves, size: 40, color: Colors.white),
                 Icon(Icons.beach_access, size: 35, color: Colors.white),
-                Row(children: [Icon(Icons.water_drop, size: 20, color: Colors.white), Icon(Icons.water, size: 30, color: Colors.white)]),
+                Row(
+                  children: [
+                    Icon(Icons.water_drop, size: 20, color: Colors.white),
+                    Icon(Icons.water, size: 30, color: Colors.white),
+                  ],
+                ),
               ],
             ),
           ),
@@ -553,9 +807,19 @@ class EnvironmentalImpactCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Icon(Icons.pets, size: 30, color: Colors.white),
-                Row(children: [Icon(Icons.cruelty_free, size: 25, color: Colors.white), Icon(Icons.bug_report, size: 25, color: Colors.white)]),
+                Row(
+                  children: [
+                    Icon(Icons.cruelty_free, size: 25, color: Colors.white),
+                    Icon(Icons.bug_report, size: 25, color: Colors.white),
+                  ],
+                ),
                 Icon(Icons.forest, size: 40, color: Colors.white),
-                Row(children: [Icon(Icons.grass, size: 30, color: Colors.white), Icon(Icons.spa, size: 25, color: Colors.white)]),
+                Row(
+                  children: [
+                    Icon(Icons.grass, size: 30, color: Colors.white),
+                    Icon(Icons.spa, size: 25, color: Colors.white),
+                  ],
+                ),
               ],
             ),
           ),
@@ -570,7 +834,12 @@ class EnvironmentalImpactCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Icon(Icons.water, size: 40, color: Colors.white),
-                Row(children: [Icon(Icons.arrow_outward, size: 25, color: Colors.white), Icon(Icons.map, size: 30, color: Colors.white)]),
+                Row(
+                  children: [
+                    Icon(Icons.arrow_outward, size: 25, color: Colors.white),
+                    Icon(Icons.map, size: 30, color: Colors.white),
+                  ],
+                ),
                 Icon(Icons.sailing, size: 35, color: Colors.white),
               ],
             ),
@@ -613,8 +882,16 @@ class ProvinceCard extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: color.withAlpha(_alpha(0.3)), blurRadius: 12, offset: const Offset(0, 6)),
-          BoxShadow(color: Colors.black.withAlpha(_alpha(0.1)), blurRadius: 20, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: color.withAlpha(_alpha(0.3)),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: Colors.black.withAlpha(_alpha(0.1)),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Material(
@@ -633,7 +910,10 @@ class ProvinceCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Found $treeCount mangrove reports across years:', style: const TextStyle(fontWeight: FontWeight.w500)),
+                        Text(
+                          'Found $treeCount mangrove reports across years:',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
                         const SizedBox(height: 12),
                         ...speciesByYear.entries.map((entry) {
                           return Padding(
@@ -642,16 +922,35 @@ class ProvinceCard extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(10)),
-                                  child: Text('Year ${entry.key}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.shade100,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    'Year ${entry.key}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green.shade800,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(height: 6),
                                 Row(
                                   children: [
-                                    const Icon(Icons.eco, color: Colors.green, size: 16),
+                                    const Icon(
+                                      Icons.eco,
+                                      color: Colors.green,
+                                      size: 16,
+                                    ),
                                     const SizedBox(width: 8),
-                                    Text('${entry.value} species identified', style: const TextStyle(fontSize: 15)),
+                                    Text(
+                                      '${entry.value} species identified',
+                                      style: const TextStyle(fontSize: 15),
+                                    ),
                                   ],
                                 ),
                               ],
@@ -659,12 +958,18 @@ class ProvinceCard extends StatelessWidget {
                           );
                         }),
                         const SizedBox(height: 8),
-                        const Text('These species contribute significantly to coastal protection and biodiversity in the region.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                        const Text(
+                          'These species contribute significantly to coastal protection and biodiversity in the region.',
+                          style: TextStyle(fontSize: 13, color: Colors.grey),
+                        ),
                       ],
                     ),
                   ),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Close'),
+                    ),
                     TextButton(
                       onPressed: () {
                         // Open detail dialog on top of summary (so closing detail returns to summary)
@@ -677,53 +982,128 @@ class ProvinceCard extends StatelessWidget {
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(color: theme.colorScheme.primary, borderRadius: BorderRadius.circular(8)),
-                                    child: Icon(Icons.eco, color: theme.colorScheme.onPrimary),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.eco,
+                                      color: theme.colorScheme.onPrimary,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Expanded(child: Text('Detailed of Identified Species', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
-                                  IconButton(icon: Icon(Icons.close, color: theme.iconTheme.color), onPressed: () => Navigator.pop(detailCtx)),
+                                  Expanded(
+                                    child: Text(
+                                      'Detailed of Identified Species',
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.close,
+                                      color: theme.iconTheme.color,
+                                    ),
+                                    onPressed: () => Navigator.pop(detailCtx),
+                                  ),
                                 ],
                               ),
                               content: SizedBox(
                                 width: double.maxFinite,
-                                height: MediaQuery.of(detailCtx).size.height * 0.6,
+                                height:
+                                    MediaQuery.of(detailCtx).size.height * 0.6,
                                 child: SingleChildScrollView(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text('$province • Detailed list of identified species by year', style: theme.textTheme.bodySmall),
+                                      Text(
+                                        '$province • Detailed list of identified species by year',
+                                        style: theme.textTheme.bodySmall,
+                                      ),
                                       const SizedBox(height: 12),
-                                      if (speciesDetails == null || speciesDetails!.isEmpty)
-                                        Center(child: Text('No detailed species data available.', style: theme.textTheme.bodyMedium))
+                                      if (speciesDetails == null ||
+                                          speciesDetails!.isEmpty)
+                                        Center(
+                                          child: Text(
+                                            'No detailed species data available.',
+                                            style: theme.textTheme.bodyMedium,
+                                          ),
+                                        )
                                       else
-                                        for (final entry in speciesDetails!.entries)
+                                        for (final entry
+                                            in speciesDetails!.entries)
                                           Padding(
-                                            padding: const EdgeInsets.only(bottom: 12.0),
+                                            padding: const EdgeInsets.only(
+                                              bottom: 12.0,
+                                            ),
                                             child: Card(
                                               elevation: 2,
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
                                               child: Padding(
-                                                padding: const EdgeInsets.all(12.0),
+                                                padding: const EdgeInsets.all(
+                                                  12.0,
+                                                ),
                                                 child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
                                                     Row(
-                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceBetween,
                                                       children: [
-                                                        Text('Year ${entry.key}', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                                                        Text('${entry.value.length} species', style: theme.textTheme.bodySmall),
+                                                        Text(
+                                                          'Year ${entry.key}',
+                                                          style: theme
+                                                              .textTheme
+                                                              .titleSmall
+                                                              ?.copyWith(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                        ),
+                                                        Text(
+                                                          '${entry.value.length} species',
+                                                          style: theme
+                                                              .textTheme
+                                                              .bodySmall,
+                                                        ),
                                                       ],
                                                     ),
                                                     const SizedBox(height: 8),
                                                     Wrap(
                                                       spacing: 8,
                                                       runSpacing: 8,
-                                                      children: entry.value.map((s) {
+                                                      children: entry.value.map((
+                                                        s,
+                                                      ) {
                                                         return Chip(
-                                                          label: Text(s, style: theme.textTheme.bodyMedium),
-                                                          backgroundColor: theme.colorScheme.primary.withAlpha(_alpha(0.12)),
-                                                          avatar: Icon(Icons.local_florist, size: 18, color: theme.colorScheme.primary),
+                                                          label: Text(
+                                                            s,
+                                                            style: theme
+                                                                .textTheme
+                                                                .bodyMedium,
+                                                          ),
+                                                          backgroundColor: theme
+                                                              .colorScheme
+                                                              .primary
+                                                              .withAlpha(
+                                                                _alpha(0.12),
+                                                              ),
+                                                          avatar: Icon(
+                                                            Icons.local_florist,
+                                                            size: 18,
+                                                            color: theme
+                                                                .colorScheme
+                                                                .primary,
+                                                          ),
                                                         );
                                                       }).toList(),
                                                     ),
@@ -759,13 +1139,34 @@ class ProvinceCard extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: Colors.white.withAlpha(_alpha(0.2)), borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.nature, color: Colors.white, size: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(_alpha(0.2)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.nature,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.white.withAlpha(_alpha(0.2)), borderRadius: BorderRadius.circular(12)),
-                      child: Text('${speciesByYear.length} YRS', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(_alpha(0.2)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${speciesByYear.length} YRS',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -774,9 +1175,24 @@ class ProvinceCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(province, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600, height: 1.2)),
+                    Text(
+                      province,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Total: $totalSpecies Species', style: TextStyle(color: Colors.white.withAlpha(_alpha(0.8)), fontSize: 12, fontWeight: FontWeight.w400)),
+                    Text(
+                      'Total: $totalSpecies Species',
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(_alpha(0.8)),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -785,14 +1201,36 @@ class ProvinceCard extends StatelessWidget {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('$treeCount', style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700, height: 1)),
-                            Text('Reports', style: TextStyle(color: Colors.white.withAlpha(_alpha(0.9)), fontSize: 12, fontWeight: FontWeight.w500)),
+                            Text(
+                              '$treeCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                height: 1,
+                              ),
+                            ),
+                            Text(
+                              'Reports',
+                              style: TextStyle(
+                                color: Colors.white.withAlpha(_alpha(0.9)),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ],
                         ),
                         Container(
                           padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(color: Colors.white.withAlpha(_alpha(0.2)), borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.trending_up, color: Colors.white, size: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(_alpha(0.2)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.trending_up,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                         ),
                       ],
                     ),
@@ -822,7 +1260,7 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
   Widget build(BuildContext context) {
     // Real data gikan sa imong ProvinceCard
     const years = ['2017', '2018', '2019', '2020', '2021', '2022', '2023'];
-    
+
     // Colors matching ProvinceCard - consistent sa whole app
     const cAgusan = Color.fromARGB(255, 191, 160, 5);
     const cSurigaoS = Color.fromARGB(255, 126, 202, 130);
@@ -840,7 +1278,7 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
             child: Icon(Icons.eco, size: 100, color: Colors.green.shade700),
           ),
         ),
-        
+
         // Main Area Chart
         Padding(
           padding: const EdgeInsets.only(top: 16, right: 8, bottom: 8, left: 0),
@@ -869,7 +1307,9 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                     showTitles: true,
                     interval: 5,
                     getTitlesWidget: (value, meta) {
-                      if (value == 0 || value % 5 != 0) return const SizedBox.shrink();
+                      if (value == 0 || value % 5 != 0) {
+                        return const SizedBox.shrink();
+                      }
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: Text(
@@ -901,7 +1341,9 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                     showTitles: true,
                     getTitlesWidget: (value, meta) {
                       final int idx = value.toInt();
-                      if (idx < 0 || idx >= years.length) return const SizedBox.shrink();
+                      if (idx < 0 || idx >= years.length) {
+                        return const SizedBox.shrink();
+                      }
                       return Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
@@ -917,8 +1359,12 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                     reservedSize: 30,
                   ),
                 ),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
               ),
               borderData: FlBorderData(
                 show: true,
@@ -941,7 +1387,7 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                     FlSpot(3, 17), // 2020: 17 species
                     FlSpot(4, 22), // 2021: 22 species
                     FlSpot(5, 29), // 2022: 29 species
-                    FlSpot(6, 1),  // 2023: 1 species
+                    FlSpot(6, 1), // 2023: 1 species
                   ],
                   isCurved: true,
                   curveSmoothness: 0.35,
@@ -954,11 +1400,11 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                     show: true,
                     getDotPainter: (spot, percent, barData, index) =>
                         FlDotCirclePainter(
-                      radius: 5,
-                      color: Colors.white,
-                      strokeColor: cSurigaoN,
-                      strokeWidth: 2.5,
-                    ),
+                          radius: 5,
+                          color: Colors.white,
+                          strokeColor: cSurigaoN,
+                          strokeWidth: 2.5,
+                        ),
                   ),
                   belowBarData: BarAreaData(
                     show: true,
@@ -973,11 +1419,11 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                     ),
                   ),
                 ),
-                
+
                 // Surigao del Sur - Growing trend (2017, 2021, 2022)
                 LineChartBarData(
                   spots: const [
-                    FlSpot(0, 9),  // 2017: 9 species
+                    FlSpot(0, 9), // 2017: 9 species
                     FlSpot(4, 13), // 2021: 13 species
                     FlSpot(5, 15), // 2022: 15 species
                   ],
@@ -992,11 +1438,11 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                     show: true,
                     getDotPainter: (spot, percent, barData, index) =>
                         FlDotCirclePainter(
-                      radius: 5,
-                      color: Colors.white,
-                      strokeColor: cSurigaoS,
-                      strokeWidth: 2.5,
-                    ),
+                          radius: 5,
+                          color: Colors.white,
+                          strokeColor: cSurigaoS,
+                          strokeWidth: 2.5,
+                        ),
                   ),
                   belowBarData: BarAreaData(
                     show: true,
@@ -1011,7 +1457,7 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                     ),
                   ),
                 ),
-                
+
                 // Dinagat Islands - Single data point (2021)
                 LineChartBarData(
                   spots: const [
@@ -1025,14 +1471,14 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                     show: true,
                     getDotPainter: (spot, percent, barData, index) =>
                         FlDotCirclePainter(
-                      radius: 7, // Mas dako para mas visible
-                      color: Colors.white,
-                      strokeColor: cDinagat,
-                      strokeWidth: 3,
-                    ),
+                          radius: 7, // Mas dako para mas visible
+                          color: Colors.white,
+                          strokeColor: cDinagat,
+                          strokeWidth: 3,
+                        ),
                   ),
                 ),
-                
+
                 // Agusan del Norte - Single data point (2021)
                 LineChartBarData(
                   spots: const [
@@ -1046,11 +1492,11 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                     show: true,
                     getDotPainter: (spot, percent, barData, index) =>
                         FlDotCirclePainter(
-                      radius: 7, // Mas dako para mas visible
-                      color: Colors.white,
-                      strokeColor: cAgusan,
-                      strokeWidth: 3,
-                    ),
+                          radius: 7, // Mas dako para mas visible
+                          color: Colors.white,
+                          strokeColor: cAgusan,
+                          strokeWidth: 3,
+                        ),
                   ),
                 ),
               ],
@@ -1060,24 +1506,38 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                   tooltipPadding: const EdgeInsets.all(10),
                   getTooltipColor: (touchedSpot) {
                     switch (touchedSpot.barIndex) {
-                      case 0: return cSurigaoN;
-                      case 1: return cSurigaoS;
-                      case 2: return cDinagat;
-                      case 3: return cAgusan;
-                      default: return Colors.grey;
+                      case 0:
+                        return cSurigaoN;
+                      case 1:
+                        return cSurigaoS;
+                      case 2:
+                        return cDinagat;
+                      case 3:
+                        return cAgusan;
+                      default:
+                        return Colors.grey;
                     }
                   },
                   getTooltipItems: (touchedSpots) {
                     return touchedSpots.map((spot) {
                       String province;
                       switch (spot.barIndex) {
-                        case 0: province = 'Surigao del Norte'; break;
-                        case 1: province = 'Surigao del Sur'; break;
-                        case 2: province = 'Dinagat Islands'; break;
-                        case 3: province = 'Agusan del Norte'; break;
-                        default: province = 'Unknown';
+                        case 0:
+                          province = 'Surigao del Norte';
+                          break;
+                        case 1:
+                          province = 'Surigao del Sur';
+                          break;
+                        case 2:
+                          province = 'Dinagat Islands';
+                          break;
+                        case 3:
+                          province = 'Agusan del Norte';
+                          break;
+                        default:
+                          province = 'Unknown';
                       }
-                      
+
                       return LineTooltipItem(
                         '$province\n',
                         const TextStyle(
@@ -1109,7 +1569,7 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
             ),
           ),
         ),
-        
+
         // Toggle-able Legend - dili na mag-cover sa data
         if (_showLegend)
           Positioned(
@@ -1127,10 +1587,7 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                     offset: const Offset(0, 3),
                   ),
                 ],
-                border: Border.all(
-                  color: Colors.green.shade200,
-                  width: 1.5,
-                ),
+                border: Border.all(color: Colors.green.shade200, width: 1.5),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1168,7 +1625,7 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
               ),
             ),
           ),
-        
+
         // Show Legend Button (pag naka-hide)
         if (!_showLegend)
           Positioned(
@@ -1244,7 +1701,13 @@ class ActionButton extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const ActionButton({super.key, required this.title, required this.icon, required this.color, required this.onTap});
+  const ActionButton({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1260,7 +1723,19 @@ class ActionButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: color.withAlpha(_alpha(0.3))),
           ),
-          child: Column(children: [Icon(icon, color: color, size: 28), const SizedBox(height: 8), Text(title, style: TextStyle(color: color.withAlpha(_alpha(0.8)), fontWeight: FontWeight.bold))]),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  color: color.withAlpha(_alpha(0.8)),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1273,13 +1748,22 @@ Widget _buildFormattedInfo(BuildContext context, String info) {
   final bool isDark = theme.brightness == Brightness.dark;
 
   // Updated: use current TextTheme properties (bodyMedium / bodySmall) instead of deprecated bodyText1 / caption
-  final Color textColor = theme.textTheme.bodyMedium?.color ?? (isDark ? Colors.white : Colors.black);
-  final Color secondaryColor = theme.textTheme.bodySmall?.color ?? textColor.withAlpha(_alpha(0.85));
+  final Color textColor =
+      theme.textTheme.bodyMedium?.color ??
+      (isDark ? Colors.white : Colors.black);
+  final Color secondaryColor =
+      theme.textTheme.bodySmall?.color ?? textColor.withAlpha(_alpha(0.85));
 
   // Updated: avoid withOpacity (deprecated) and use withAlpha helper
-  final Color bulletColor = theme.colorScheme.onSurface.withAlpha(_alpha(isDark ? 0.8 : 0.9));
+  final Color bulletColor = theme.colorScheme.onSurface.withAlpha(
+    _alpha(isDark ? 0.8 : 0.9),
+  );
 
-  final lines = info.split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+  final lines = info
+      .split('\n')
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
   final List<Widget> widgets = [];
 
   for (final line in lines) {
@@ -1300,7 +1784,10 @@ Widget _buildFormattedInfo(BuildContext context, String info) {
                   width: 6,
                   height: 6,
                   margin: const EdgeInsets.only(top: 6),
-                  decoration: BoxDecoration(color: bulletColor, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: bulletColor,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -1308,8 +1795,17 @@ Widget _buildFormattedInfo(BuildContext context, String info) {
                     text: TextSpan(
                       style: TextStyle(color: textColor),
                       children: [
-                        TextSpan(text: '$key: ', style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-                        TextSpan(text: val, style: TextStyle(color: secondaryColor)),
+                        TextSpan(
+                          text: '$key: ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        TextSpan(
+                          text: val,
+                          style: TextStyle(color: secondaryColor),
+                        ),
                       ],
                     ),
                   ),
@@ -1329,10 +1825,15 @@ Widget _buildFormattedInfo(BuildContext context, String info) {
                   width: 6,
                   height: 6,
                   margin: const EdgeInsets.only(top: 6),
-                  decoration: BoxDecoration(color: bulletColor, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: bulletColor,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 8),
-                Expanded(child: Text(content, style: TextStyle(color: textColor))),
+                Expanded(
+                  child: Text(content, style: TextStyle(color: textColor)),
+                ),
               ],
             ),
           ),
@@ -1344,15 +1845,25 @@ Widget _buildFormattedInfo(BuildContext context, String info) {
         final key = line.substring(0, idx).trim();
         final val = line.substring(idx + 1).trim();
         final keyLower = key.toLowerCase();
-        final isHighlight = keyLower == 'takeaway' || keyLower == 'note' || keyLower == 'practical tip';
-        final TextStyle keyStyle = TextStyle(fontWeight: FontWeight.bold, color: textColor);
-        final TextStyle valStyle = (keyLower == 'takeaway' || keyLower == 'note')
+        final isHighlight =
+            keyLower == 'takeaway' ||
+            keyLower == 'note' ||
+            keyLower == 'practical tip';
+        final TextStyle keyStyle = TextStyle(
+          fontWeight: FontWeight.bold,
+          color: textColor,
+        );
+        final TextStyle valStyle =
+            (keyLower == 'takeaway' || keyLower == 'note')
             ? TextStyle(fontStyle: FontStyle.italic, color: secondaryColor)
             : TextStyle(color: secondaryColor);
 
         widgets.add(
           Padding(
-            padding: EdgeInsets.only(top: isHighlight ? 12.0 : 0.0, bottom: 8.0),
+            padding: EdgeInsets.only(
+              top: isHighlight ? 12.0 : 0.0,
+              bottom: 8.0,
+            ),
             child: RichText(
               text: TextSpan(
                 style: TextStyle(color: textColor),
@@ -1375,5 +1886,8 @@ Widget _buildFormattedInfo(BuildContext context, String info) {
     }
   }
 
-  return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: widgets,
+  );
 }

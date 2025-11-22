@@ -307,7 +307,7 @@ void _handleLogout(BuildContext context) async {
           ElevatedButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 34, 163, 81),
+              backgroundColor: const Color.fromARGB(255, 190, 16, 16),
               foregroundColor: Colors.white,
             ),
             child: const Text('Yes'),
