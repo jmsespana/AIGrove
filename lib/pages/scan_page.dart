@@ -6,14 +6,16 @@ import 'package:provider/provider.dart';
 import '../services/ml_service.dart';
 import '../services/user_service.dart';
 import '../services/location_service.dart'; // I-add ni
+import '../services/llm_service.dart'; // I-add para sa AI insights
+import '../services/chatbot_service.dart'; // I-add para sa image explanation
 import '../models/detection_result.dart';
 import '../widgets/detection_overlay.dart';
 import '../theme/app_theme.dart';
 import 'species_info_page.dart';
 
-/// Scan Page with YOLOv8 Integration
+/// Scan Page with YOLOv8 Integration ug LLM insights
 ///
-/// Kini ang page para mag-scan ug detect og mangroves
+/// Kini ang page para mag-scan ug detect og mangroves with AI-powered insights
 class ScanPage extends StatefulWidget {
   const ScanPage({super.key});
 
@@ -25,6 +27,9 @@ class _ScanPageState extends State<ScanPage> {
   final MLService _mlService = MLService();
   final ImagePicker _picker = ImagePicker();
   final LocationService _locationService = LocationService(); // I-add ni
+  final LLMService _llmService = LLMService(); // I-add para sa LLM integration
+  final ChatbotService _chatbotService =
+      ChatbotService(); // I-add para sa image explanation
 
   File? _selectedImage;
   File? _processedImage; // Para sa fixed orientation ug resized image
@@ -210,6 +215,11 @@ class _ScanPageState extends State<ScanPage> {
       // I-fix ang orientation ug i-resize to 640x640
       final processedFile = await _fixImageOrientation(imageFile);
 
+      // I-store ang processed image
+      setState(() {
+        _processedImage = processedFile;
+      });
+
       // Kuha ang processed image dimensions (dapat 640x640 na ni)
       final imageBytes = await processedFile.readAsBytes();
       final decodedImage = img.decodeImage(imageBytes);
@@ -225,9 +235,8 @@ class _ScanPageState extends State<ScanPage> {
       final detections = await _mlService.detectObjects(processedFile);
 
       // ⭐ Mas strict nga thresholds para dili mu-accept og random plants
-      const double highConfidenceThreshold = 0.80; // 80% - Sure kaayo nga mangrove
-      const double mediumConfidenceThreshold = 0.65; // 65% - Posible pero uncertain
-      const double lowConfidenceThreshold = 0.50; // 50% - Minimum cutoff
+      const double highConfidenceThreshold =
+          0.60; // 60% - Sure kaayo nga mangrove
 
       // Kuha lang ang best detection
       final bestDetection = detections.isNotEmpty
@@ -235,74 +244,199 @@ class _ScanPageState extends State<ScanPage> {
           : null;
 
       // I-validate kung legit ba ang detection
-      if (bestDetection == null || bestDetection.confidence < lowConfidenceThreshold) {
+      // Kung below 60%, i-treat as non-mangrove and show AI explanation
+      if (bestDetection == null ||
+          bestDetection.confidence < highConfidenceThreshold) {
         setState(() {
-          _processedImage = processedFile;
           _detections = null;
           _isLoading = false;
         });
-        _showError(
-          'Not detected as a mangrove species! Confidence too low (${bestDetection != null ? (bestDetection.confidence * 100).toStringAsFixed(1) : "0"}%). Please scan a valid mangrove leaf.',
-        );
+
+        // Get AI explanation kung unsa ang na-scan
+        if (bestDetection != null) {
+          _showNonMangroveExplanation(bestDetection, processedFile);
+        } else {
+          _showError(
+            'No objects detected. Please scan a valid mangrove leaf with good lighting and focus.',
+          );
+        }
         return;
       }
 
-      // I-update ang state with detection
+      // I-update ang state with detection (only for >= 60% confidence)
       setState(() {
-        _processedImage = processedFile;
         _detections = [bestDetection];
         _isLoading = false;
       });
 
+      // ⭐ Fetch LLM insight asynchronously (dili mag-block sa UI)
+      _fetchLLMInsight(bestDetection);
+
       // I-show ang appropriate feedback based sa confidence level
       if (!mounted) return;
 
-      if (bestDetection.confidence >= highConfidenceThreshold) {
-        // High confidence - Sure kaayo
-        debugPrint('✅ High confidence detection: ${bestDetection.label} (${(bestDetection.confidence * 100).toStringAsFixed(1)}%)');
-        await _saveScanToHistory(bestDetection);
-      } else if (bestDetection.confidence >= mediumConfidenceThreshold) {
-        // Medium confidence - I-show ang warning pero i-save gihapon
-        debugPrint('⚠️ Medium confidence detection: ${bestDetection.label} (${(bestDetection.confidence * 100).toStringAsFixed(1)}%)');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Detected as ${bestDetection.label} with ${(bestDetection.confidence * 100).toStringAsFixed(1)}% confidence.\n\nResults may not be fully accurate. Please verify the identification!',
-            ),
-            backgroundColor: Colors.orange,
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'OK',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
-          ),
-        );
-        await _saveScanToHistory(bestDetection);
-      } else {
-        // Low confidence (50-65%) - I-show ang result pero DILI i-save
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Very low confidence (${(bestDetection.confidence * 100).toStringAsFixed(1)}%).\n\nThis may NOT be a mangrove species!\n\nPlease:\n• Scan actual mangrove leaves\n• Ensure good lighting\n• Focus clearly on the leaf',
-            ),
-            backgroundColor: Colors.red[700],
-            duration: const Duration(seconds: 6),
-            action: SnackBarAction(
-              label: 'RETRY',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
-          ),
-        );
-        // DILI i-save ang scan kay low confidence
-        debugPrint('❌ Low confidence, scan NOT SAVED: ${bestDetection.label} (${(bestDetection.confidence * 100).toStringAsFixed(1)}%)');
-      }
+      // High confidence - Sure kaayo (60% and above)
+      debugPrint(
+        '✅ High confidence detection: ${bestDetection.label} (${(bestDetection.confidence * 100).toStringAsFixed(1)}%)',
+      );
+      await _saveScanToHistory(bestDetection);
     } catch (e) {
       setState(() {
         _errorMessage = 'Detection failed: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  /// Fetch LLM insight para sa detected species (async, dili mag-block sa UI)
+  Future<void> _fetchLLMInsight(DetectionResult detection) async {
+    try {
+      debugPrint('🤖 Fetching LLM insight for: ${detection.label}');
+
+      // Call LLM service para kuha ang HTML insight
+      final htmlInsight = await _llmService.getSpeciesInsight(
+        speciesName: detection.label,
+        confidence: detection.confidence,
+      );
+
+      // Update ang detection result with HTML content
+      detection.llmInsightHtml = htmlInsight;
+
+      // Refresh ang UI para ma-display ang LLM insight
+      if (mounted) {
+        setState(() {
+          // Force rebuild para ma-update ang DetectionOverlay
+          _detections = [detection];
+        });
+        debugPrint('✅ LLM insight loaded ug na-display!');
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching LLM insight: $e');
+      // Dili na i-show ang error sa user, fallback HTML na lang i-use
+    }
+  }
+
+  /// Show AI-powered explanation kung non-mangrove ang na-scan
+  Future<void> _showNonMangroveExplanation(
+    DetectionResult detection,
+    File imageFile,
+  ) async {
+    try {
+      // Show loading dialog
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Analyzing your image with AI...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Get AI explanation ng actual image
+      final explanation = await _chatbotService.explainNonMangroveImage(
+        detectedLabel: detection.label,
+        confidence: detection.confidence,
+        imagePath: imageFile.path,
+      );
+
+      // Close loading dialog
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      // Show explanation in a dialog
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.orange[700]),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('Not a Mangrove', style: TextStyle(fontSize: 20)),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        color: Colors.orange[700],
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'AI Analysis',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  explanation,
+                  style: const TextStyle(fontSize: 15, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Got it'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                // Trigger new scan
+                _pickImageFromGallery();
+              },
+              icon: const Icon(Icons.camera_alt, size: 18),
+              label: const Text('Scan Again'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[700],
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ Error showing non-mangrove explanation: $e');
+      // Fallback to simple error message
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog if open
+        _showError(
+          'Not a mangrove species! Detected: ${detection.label} (${(detection.confidence * 100).toStringAsFixed(1)}%). Please scan actual mangrove leaves.',
+        );
+      }
     }
   }
 
@@ -378,18 +512,45 @@ class _ScanPageState extends State<ScanPage> {
 
     if (_isLoading) {
       return Container(
-        color: bgColor,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            CircularProgressIndicator(color: Colors.green[700], strokeWidth: 3),
-            const SizedBox(height: 20),
-            Text(
-              'Analyzing image...',
-              style: TextStyle(
-                color: Colors.green[700],
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+            // Show the image being analyzed
+            if (_selectedImage != null)
+              Image.file(_selectedImage!, fit: BoxFit.cover),
+            // Semi-transparent overlay with loading indicator
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(
+                          color: Colors.green[700],
+                          strokeWidth: 3,
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Analyzing image...',
+                          style: TextStyle(
+                            color: Colors.green[700],
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -470,19 +631,24 @@ class _ScanPageState extends State<ScanPage> {
       );
     }
 
-    // Display ang processed image (640x640 square) kung available na
+    // Display ang PROCESSED image (640x640) para match sa detection coordinates
     final imageToDisplay = _processedImage ?? _selectedImage!;
 
     return Container(
       color: Colors.black,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Fit contain para mo-maintain ang square aspect ratio
-          Image.file(imageToDisplay, fit: BoxFit.contain),
-          if (_detections != null && _imageSize != null)
-            DetectionOverlay(detections: _detections!, imageSize: _imageSize!),
-        ],
+      child: ClipRect(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Fill the entire space without black bars
+            Image.file(imageToDisplay, fit: BoxFit.cover),
+            if (_detections != null && _imageSize != null)
+              DetectionOverlay(
+                detections: _detections!,
+                imageSize: _imageSize!,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -616,6 +782,8 @@ class _ScanPageState extends State<ScanPage> {
                         scientificName: detection.label,
                         confidence: detection.confidence,
                         imagePath: _selectedImage?.path,
+                        llmInsightHtml:
+                            detection.llmInsightHtml, // Pass LLM insight
                       ),
                     ),
                   );
