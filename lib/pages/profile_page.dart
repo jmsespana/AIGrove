@@ -385,7 +385,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   // Recent Activity List
                   Consumer<ProfileService>(
                     builder: (context, profileService, child) {
-                      final activities = profileService.recentActivity;
+                      // I-filter ang activities nga naa pa lang sa 24 hours
+                      final activities = _filterRecentActivities(
+                        profileService.recentActivity,
+                      );
 
                       if (activities.isEmpty) {
                         return SliverFillRemaining(
@@ -467,6 +470,27 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
     );
+  }
+
+  // I-filter ang activities nga naa pa sa sulod sa 24 hours
+  List<Map<String, dynamic>> _filterRecentActivities(
+    List<Map<String, dynamic>> activities,
+  ) {
+    final now = DateTime.now();
+    final twentyFourHoursAgo = now.subtract(const Duration(hours: 24));
+
+    return activities.where((activity) {
+      try {
+        final createdAt = DateTime.parse(
+          activity['created_at'] ?? DateTime.now().toIso8601String(),
+        );
+        // I-return lang kung ang activity kay wala pa mo-abot sa 24 hours
+        return createdAt.isAfter(twentyFourHoursAgo);
+      } catch (e) {
+        debugPrint("Error parsing date: $e");
+        return false; // I-exclude ang invalid dates
+      }
+    }).toList();
   }
 
   // Modern stat divider

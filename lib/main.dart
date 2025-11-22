@@ -3,6 +3,7 @@ import 'package:aigrove/auth/login_page.dart';
 import 'package:aigrove/auth/register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +19,17 @@ import 'widgets/custom_bottom_nav.dart'; // I-import ang bag-ong custom bottom n
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ADD THIS LINE - Load environment variables
+  try {
+    await dotenv.load(fileName: ".env");
+    debugPrint('✅ .env file na-load na');
+    debugPrint(
+      '🔑 OPENROUTER_API_KEY: ${dotenv.env['OPENROUTER_API_KEY']?.substring(0, 20)}...',
+    );
+  } catch (e) {
+    debugPrint('❌ Error sa pag-load sa .env file: $e');
+  }
 
   await Supabase.initialize(
     url: 'https://xtgzxoszyrxzbqvfdfif.supabase.co',
@@ -125,19 +137,11 @@ class _MainScreenState extends State<MainScreen> {
           appBar: AppBar(
             leading: Builder(
               builder: (context) => IconButton(
-                icon: FaIcon(
-                  FontAwesomeIcons.bars,
-                  color: contentColor,
-                ),
+                icon: FaIcon(FontAwesomeIcons.bars, color: contentColor),
                 onPressed: () => Scaffold.of(context).openDrawer(),
               ),
             ),
-            title: Text(
-              "AIgrove",
-              style: TextStyle(
-                color: contentColor,
-              ),
-            ),
+            title: Text("AIgrove", style: TextStyle(color: contentColor)),
             backgroundColor: barBackgroundColor,
             actions: [
               IconButton(
