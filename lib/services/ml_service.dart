@@ -15,12 +15,12 @@ class MLService {
   // Classification thresholds - RELAXED FOR DEMO
   static const double confidenceThreshold = 0.55; // Minimum 55% confidence
 
-  /// Load ang TFLite model - UPDATED PARA SA last_float32.tflite
+  /// Load ang TFLite model - UPDATED PARA SA best_float32.tflite
   Future<void> loadModel() async {
     try {
-      // Load ang bag-ong model: last_float32.tflite
+      // Load ang model: best_float32.tflite
       _interpreter = await Interpreter.fromAsset(
-        'assets/models/last_float32.tflite',
+        'assets/models/best_float32.tflite',
       );
 
       // Get input size from model
@@ -126,11 +126,14 @@ class MLService {
 
   /// Preprocess image para sa model input
   List<List<List<List<double>>>> _preprocessImage(img.Image image) {
-    // Resize to model input size
+    // Resize to model input size using high-quality LANCZOS interpolation
+    // Kini para sharp gihapon ang image bisan gi-resize
     final resized = img.copyResize(
       image,
       width: _inputSize!,
       height: _inputSize!,
+      interpolation:
+          img.Interpolation.cubic, // High-quality cubic interpolation
     );
 
     // Create 4D tensor [1, height, width, channels]
@@ -181,17 +184,23 @@ class MLService {
       final greenDensity = metrics['density']!;
       final edgeDensity = metrics['edges']!;
 
-      // Check if prediction has good leaf characteristics
-      // Kung kulang og green density or sobra ka-smooth/chaotic ang edges, reject
-      if (greenDensity < 0.15 || edgeDensity > 0.40 || edgeDensity < 0.03) {
+      // VERY RELAXED: Prioritize ML model confidence over simple metrics
+      // Only reject kung SOBRA kaayo ka-unrealistic ang values
+      // Reject kung: kulang kaayo green density (< 10%) or sobra ka-chaotic (> 50%)
+      if (greenDensity < 0.10 || edgeDensity > 0.50) {
         print(
-          '⚠️ ML detected mangrove BUT poor leaf metrics - likely NOT mangrove!',
+          '⚠️ ML detected mangrove BUT extremely poor metrics - likely NOT mangrove!',
         );
         print(
           '   Density: ${(greenDensity * 100).toStringAsFixed(1)}%, Edges: ${(edgeDensity * 100).toStringAsFixed(1)}%',
         );
         return detections; // Return empty
       }
+
+      // Log validation success
+      print(
+        '✅ Validation passed: Density ${(greenDensity * 100).toStringAsFixed(1)}%, Edges ${(edgeDensity * 100).toStringAsFixed(1)}%',
+      );
     }
 
     if (maxConfidence > confidenceThreshold) {
@@ -432,8 +441,13 @@ class MLService {
       keep.add(best);
 
       // Remove overlapping detections
+      // Tangtangon ang mga overlapping detections base sa IoU threshold
       detections.removeWhere((detection) {
-        final iou = _calculateIoU(best.boundingBox, detection.boundingBox);
+        // Check kung naa ang bounding boxes before calculating IoU
+        if (best.boundingBox == null || detection.boundingBox == null) {
+          return false;
+        }
+        final iou = _calculateIoU(best.boundingBox!, detection.boundingBox!);
         return iou > iouThreshold;
       });
     }

@@ -151,6 +151,9 @@ class SpeciesInfoPage extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final cardColor = isDarkMode ? Colors.grey[850]! : Colors.white;
     final titleColor = isDarkMode ? Colors.white : Colors.black;
+    final accentColor = isDarkMode
+        ? const Color.fromARGB(255, 16, 235, 60)
+        : const Color(0xFF6A1B9A);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -158,10 +161,10 @@ class SpeciesInfoPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.purple.withOpacity(0.3), width: 2),
+        border: Border.all(color: accentColor.withOpacity(0.3), width: 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.purple.withOpacity(0.15),
+            color: accentColor.withOpacity(0.15),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -175,7 +178,12 @@ class SpeciesInfoPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.15),
+                  color: const Color.fromARGB(
+                    255,
+                    179,
+                    24,
+                    193,
+                  ).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -198,7 +206,12 @@ class SpeciesInfoPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
+                  color: const Color.fromARGB(
+                    255,
+                    31,
+                    176,
+                    75,
+                  ).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
@@ -206,7 +219,7 @@ class SpeciesInfoPage extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: Colors.purple,
+                    color: Color.fromARGB(255, 16, 235, 60),
                   ),
                 ),
               ),
@@ -218,7 +231,7 @@ class SpeciesInfoPage extends StatelessWidget {
             style: {
               "body": Style(margin: Margins.zero, padding: HtmlPaddings.zero),
               "h3": Style(
-                color: const Color(0xFF6A1B9A),
+                color: accentColor,
                 fontSize: FontSize(17),
                 fontWeight: FontWeight.bold,
                 margin: Margins.only(bottom: 8),
@@ -240,10 +253,7 @@ class SpeciesInfoPage extends StatelessWidget {
                     ? const Color(0xFFE0E0E0)
                     : const Color(0xFF424242),
               ),
-              "strong": Style(
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF6A1B9A),
-              ),
+              "strong": Style(fontWeight: FontWeight.bold, color: accentColor),
             },
           ),
         ],

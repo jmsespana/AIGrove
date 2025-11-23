@@ -20,12 +20,17 @@ class LLMService {
   static const Duration _cacheDuration = Duration(hours: 24);
 
   // Hardcoded API key
-  final String _apiKey =
-      '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';
+  late final String _apiKey;
 
   LLMService() {
-    debugPrint('🔑 Groq API Key initialized: ${_apiKey.substring(0, 20)}...');
+    _apiKey = dotenv.env['GROQ_API_KEY'] ?? '';
+    if (_apiKey.isEmpty) {
+      debugPrint('⚠️ GROQ_API_KEY wala sa .env file!');
+    } else {
+      debugPrint('🔑 Groq API Key initialized: ${_apiKey.substring(0, 20)}...');
+    }
   }
+
 
   Future<String> getDailyEcoTip() async {
     // ⭐ Check cache una before mag-API call para makatipid

@@ -36,10 +36,10 @@ class _DetectionPainter extends CustomPainter {
 
     for (var detection in detections) {
       final box = Rect.fromLTRB(
-        detection.boundingBox.left * scaleX,
-        detection.boundingBox.top * scaleY,
-        detection.boundingBox.right * scaleX,
-        detection.boundingBox.bottom * scaleY,
+        detection.boundingBox!.left * scaleX,
+        detection.boundingBox!.top * scaleY,
+        detection.boundingBox!.right * scaleX,
+        detection.boundingBox!.bottom * scaleY,
       );
 
       // Draw outer shadow for depth
