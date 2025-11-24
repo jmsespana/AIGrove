@@ -415,7 +415,7 @@ class _ScanPageState extends State<ScanPage> {
           // Force rebuild para ma-update ang DetectionOverlay
           _detections = [detection];
         });
-        debugPrint('✅ LLM insight loaded ug na-display!');
+        debugPrint('✅ LLM insight loaded and displayed!');
       }
     } catch (e) {
       debugPrint('❌ Error fetching LLM insight: $e');

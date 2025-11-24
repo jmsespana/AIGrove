@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aigrove/services/profile_service.dart';
@@ -1226,7 +1224,7 @@ class _QuizScreenState extends State<QuizScreen> {
         ),
       );
     } catch (e) {
-      debugPrint('May error sa pag-save pero proceed pa rin: $e');
+      debugPrint('Error saving but proceeding anyway: $e');
 
       // I-close ang loading dialog
       if (mounted) Navigator.pop(context);

@@ -317,7 +317,7 @@ class UserService extends ChangeNotifier {
 
       debugPrint('✅ Scan na-save successfully: $speciesName');
     } catch (e, stackTrace) {
-      debugPrint('❌ Error sa pag-save sa scan: $e');
+      debugPrint('❌ Error saving scan: $e');
       debugPrint('❌ Stack trace: $stackTrace');
       rethrow;
     }
@@ -348,7 +348,7 @@ class UserService extends ChangeNotifier {
       debugPrint('🔍 Query response: $response');
 
       _userScans = List<Map<String, dynamic>>.from(response);
-      debugPrint('✅ Na-load ang ${_userScans.length} scans');
+      debugPrint('✅ Loaded ${_userScans.length} scans');
 
       if (_userScans.isNotEmpty) {
         debugPrint('🔍 First scan: ${_userScans.first}');
@@ -358,7 +358,7 @@ class UserService extends ChangeNotifier {
 
       notifyListeners();
     } catch (e, stackTrace) {
-      debugPrint('❌ Error sa pag-load sa scans: $e');
+      debugPrint('❌ Error loading scans: $e');
       debugPrint('❌ Stack trace: $stackTrace');
       _userScans = [];
       notifyListeners();
