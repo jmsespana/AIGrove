@@ -31,7 +31,6 @@ class LLMService {
     }
   }
 
-
   Future<String> getDailyEcoTip() async {
     // ⭐ Check cache una before mag-API call para makatipid
     final prefs = await SharedPreferences.getInstance();
@@ -240,15 +239,33 @@ Example: 🌊 Did you know? Mangroves prevent coastal erosion by stabilizing sho
   Future<String> getSpeciesInsight({
     required String speciesName,
     required double confidence,
+    double? latitude,
+    double? longitude,
+    String? locationAddress,
   }) async {
     try {
       debugPrint('🌿 Getting species insight for: $speciesName');
+
+      // Build location context string
+      String locationContext = '';
+      if (latitude != null && longitude != null) {
+        if (locationAddress != null && locationAddress.isNotEmpty) {
+          locationContext =
+              'The scan was taken at: $locationAddress (coordinates: $latitude, $longitude).';
+          debugPrint('📍 Including location in insight: $locationAddress');
+        } else {
+          locationContext =
+              'The scan was taken at coordinates: $latitude, $longitude.';
+          debugPrint('📍 Including location in insight: $latitude, $longitude');
+        }
+      }
 
       final prompt =
           '''
 You are an expert marine biologist specializing in mangrove ecosystems in the Philippines, particularly in the Caraga Region.
 
 A mangrove species has been detected: "$speciesName" with ${(confidence * 100).toStringAsFixed(1)}% confidence.
+$locationContext
 
 Provide a comprehensive, informative response in HTML format with the following sections:
 
@@ -268,6 +285,7 @@ Provide a comprehensive, informative response in HTML format with the following 
    - Associated wildlife
 
 4. **Distribution in Caraga Region**
+   - ${latitude != null && longitude != null ? (locationAddress != null && locationAddress.isNotEmpty ? 'IMPORTANT: Start with "<div style=\"margin: 12px 0; padding: 16px; background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); border-radius: 12px; border: 2px solid #4CAF50;\"><p style=\"margin: 0 0 12px 0;\"><strong>📍 Scanned at:</strong> $locationAddress</p><a id=\"view-on-map-btn\" href=\"#map\" style=\"display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%); color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: bold; box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);\"><span style=\"font-size: 16px;\">🗺️</span>View Scan Location on Map</a></div>" BEFORE listing other distribution info' : 'IMPORTANT: Start with "<div style=\"margin: 12px 0; padding: 16px; background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); border-radius: 12px; border: 2px solid #4CAF50;\"><p style=\"margin: 0 0 12px 0;\"><strong>📍 Scanned at:</strong> [approximate location based on coordinates $latitude, $longitude]</p><a id=\"view-on-map-btn\" href=\"#map\" style=\"display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%); color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: bold; box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);\"><span style=\"font-size: 16px;\">🗺️</span>View Scan Location on Map</a></div>" BEFORE listing other distribution info') : 'General distribution in Caraga'}
    - Specific locations in Caraga (Agusan del Norte, Agusan del Sur, Surigao del Norte, Surigao del Sur, Dinagat Islands)
    - Common coastal areas where found
    - Abundance status in the region
@@ -321,17 +339,41 @@ Be specific to Philippine context and Caraga Region. Keep total response under 4
       }
     } catch (e) {
       debugPrint('❌ Error getting species insight: $e');
-      return _getFallbackSpeciesInsight(speciesName, confidence);
+      return _getFallbackSpeciesInsight(
+        speciesName,
+        confidence,
+        latitude,
+        longitude,
+        locationAddress,
+      );
     }
   }
 
   /// Fallback HTML kung mag-fail ang API
-  String _getFallbackSpeciesInsight(String speciesName, double confidence) {
+  String _getFallbackSpeciesInsight(
+    String speciesName,
+    double confidence, [
+    double? latitude,
+    double? longitude,
+    String? locationAddress,
+  ]) {
+    final locationHtml = (latitude != null && longitude != null)
+        ? '''
+  <div style="margin: 12px 0; padding: 16px; background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); border-radius: 12px; border: 2px solid #4CAF50;">
+    <p style="margin: 0 0 12px 0;"><strong>📍 Scan Location:</strong> ${locationAddress ?? '$latitude, $longitude'}</p>
+    <a id="view-on-map-btn" href="#map" style="display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%); color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: bold; box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);">
+      <span style="font-size: 16px;">🗺️</span>View Scan Location on Map
+    </a>
+  </div>
+'''
+        : '';
+
     return '''
 <div style="padding: 12px;">
   <h3 style="color: #2E7D32; margin: 0 0 12px 0;">$speciesName</h3>
   
   <p style="margin: 8px 0;"><strong>Detection Confidence:</strong> ${(confidence * 100).toStringAsFixed(1)}%</p>
+$locationHtml
   
   <h4 style="color: #388E3C; margin-top: 12px; margin-bottom: 6px;">About This Species</h4>
   <p style="margin: 4px 0; line-height: 1.5; color: #666;">

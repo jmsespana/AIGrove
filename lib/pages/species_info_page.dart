@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'map_page.dart';
 
 /// Species Information Page
 ///
@@ -10,6 +11,8 @@ class SpeciesInfoPage extends StatelessWidget {
   final double confidence;
   final String? imagePath;
   final String? llmInsightHtml; // LLM-generated HTML content
+  final double? latitude; // Scan location latitude
+  final double? longitude; // Scan location longitude
 
   const SpeciesInfoPage({
     super.key,
@@ -17,6 +20,8 @@ class SpeciesInfoPage extends StatelessWidget {
     required this.confidence,
     this.imagePath,
     this.llmInsightHtml,
+    this.latitude,
+    this.longitude,
   });
 
   @override
@@ -228,6 +233,23 @@ class SpeciesInfoPage extends StatelessWidget {
           const SizedBox(height: 16),
           Html(
             data: llmInsightHtml!,
+            onAnchorTap: (url, attributes, element) {
+              // Handle button click para sa View on Map
+              if (element?.id == 'view-on-map-btn') {
+                if (latitude != null && longitude != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MapPage(
+                        scanLatitude: latitude,
+                        scanLongitude: longitude,
+                        scanSpeciesName: scientificName,
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
             style: {
               "body": Style(margin: Margins.zero, padding: HtmlPaddings.zero),
               "h3": Style(
@@ -254,6 +276,13 @@ class SpeciesInfoPage extends StatelessWidget {
                     : const Color(0xFF424242),
               ),
               "strong": Style(fontWeight: FontWeight.bold, color: accentColor),
+              "a": Style(
+                color: const Color(
+                  0xFF2E7D32,
+                ), // Green color para visible sa light ug dark mode
+                textDecoration: TextDecoration.none,
+              ),
+              "div": Style(margin: Margins.symmetric(vertical: 12)),
             },
           ),
         ],

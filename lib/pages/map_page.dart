@@ -12,8 +12,17 @@ import '../widgets/map_widgets.dart';
 
 class MapPage extends StatefulWidget {
   final String? filterSpecies; // Optional: Filter to show only specific species
+  final double? scanLatitude; // Scan location latitude para ipakita sa map
+  final double? scanLongitude; // Scan location longitude para ipakita sa map
+  final String? scanSpeciesName; // Species name sa scan
 
-  const MapPage({super.key, this.filterSpecies});
+  const MapPage({
+    super.key,
+    this.filterSpecies,
+    this.scanLatitude,
+    this.scanLongitude,
+    this.scanSpeciesName,
+  });
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -33,6 +42,10 @@ class _MapPageState extends State<MapPage> {
 
   // Current map center
   LatLng _center = _caragaRegionCenter;
+
+  // Check kung scan-only view ba (clean view para sa scan location)
+  bool get _isScanOnlyView =>
+      widget.scanLatitude != null && widget.scanLongitude != null;
 
   // Markers for tree species
   final List<Marker> _markers = [];
@@ -301,25 +314,37 @@ class _MapPageState extends State<MapPage> {
     super.initState();
     _requestLocationPermission();
 
-    // I-add ang default na mangrove locations
-    _addDefaultMangroveMarkers();
+    // Kung scan-only view, i-load lang ang scan marker
+    if (_isScanOnlyView) {
+      _addScanLocationMarker();
+    } else {
+      // I-add ang default na mangrove locations
+      _addDefaultMangroveMarkers();
 
-    // Generate initial species distribution
-    _generateSpeciesDistributionMarkers();
+      // Generate initial species distribution
+      _generateSpeciesDistributionMarkers();
 
-    // Generate environmental impact markers
-    _generateEnvironmentalImpactMarkers();
+      // Generate environmental impact markers
+      _generateEnvironmentalImpactMarkers();
 
-    // Setup timer for periodic updates (every 30 seconds)
-    _distributionUpdateTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _updateSpeciesDistribution(),
-    );
+      // Setup timer for periodic updates (every 30 seconds)
+      _distributionUpdateTimer = Timer.periodic(
+        const Duration(seconds: 30),
+        (_) => _updateSpeciesDistribution(),
+      );
+    }
 
     // Center the map on the Caraga region with appropriate zoom
     Future.delayed(const Duration(milliseconds: 500), () {
+      // If scan location is provided, zoom to it
+      if (widget.scanLatitude != null && widget.scanLongitude != null) {
+        _mapController.move(
+          LatLng(widget.scanLatitude!, widget.scanLongitude!),
+          15.0, // Zoom level 15 para detailed view
+        );
+      }
       // If filterSpecies is provided, zoom to those locations
-      if (widget.filterSpecies != null) {
+      else if (widget.filterSpecies != null) {
         _focusOnSpecies(widget.filterSpecies!);
       } else {
         _fitMapToCaraga();
@@ -668,6 +693,189 @@ class _MapPageState extends State<MapPage> {
         isHighlighted: isFiltered,
       );
     }
+  }
+
+  /// I-add ang special marker para sa scan location
+  void _addScanLocationMarker() {
+    if (widget.scanLatitude == null || widget.scanLongitude == null) return;
+
+    final scanPosition = LatLng(widget.scanLatitude!, widget.scanLongitude!);
+    final speciesName = widget.scanSpeciesName ?? 'Scanned Species';
+
+    setState(() {
+      _markers.add(
+        Marker(
+          point: scanPosition,
+          width: 150,
+          height: 130,
+          child: GestureDetector(
+            onTap: () => _showScanLocationDialog(scanPosition, speciesName),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Pulsing animation circle
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.red.withOpacity(0.3),
+                    border: Border.all(color: Colors.red, width: 3),
+                  ),
+                ),
+                // Pin marker
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.5),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.photo_camera,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Scan Location',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  /// Dialog para sa scan location
+  Future<void> _showScanLocationDialog(
+    LatLng position,
+    String speciesName,
+  ) async {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isDarkMode = theme.brightness == Brightness.dark;
+
+        return AlertDialog(
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.photo_camera, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('Scan Location', style: TextStyle(fontSize: 18)),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                speciesName,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontStyle: FontStyle.italic,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 20,
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDarkMode
+                      ? Colors.red.withOpacity(0.2)
+                      : Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This is where you scanned the mangrove species.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDarkMode
+                              ? Colors.grey[300]
+                              : Colors.grey[800],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _requestLocationPermission() async {
@@ -1311,8 +1519,8 @@ class _MapPageState extends State<MapPage> {
           ),
           if (_isLoading) const Center(child: CircularProgressIndicator()),
 
-          // Province selector - with hide/show
-          if (_showProvinceSelector)
+          // Province selector - with hide/show (i-hide kung scan-only view)
+          if (_showProvinceSelector && !_isScanOnlyView)
             Positioned(
               top: 10,
               left: 10,
@@ -1439,8 +1647,8 @@ class _MapPageState extends State<MapPage> {
               ),
             ),
 
-          // Legend for mangroves - with hide/show
-          if (_showLegend)
+          // Legend for mangroves - with hide/show (i-hide kung scan-only view)
+          if (_showLegend && !_isScanOnlyView)
             Positioned(
               top: 10,
               right: 10,
@@ -1670,8 +1878,8 @@ class _MapPageState extends State<MapPage> {
               child: _buildScannedSpeciesIndicator(),
             ),
 
-          // Info panel at bottom - with hide/show
-          if (_showInfoPanel)
+          // Info panel at bottom - with hide/show (i-hide kung scan-only view)
+          if (_showInfoPanel && !_isScanOnlyView)
             Positioned(
               bottom: 30,
               left: 0,
@@ -1775,36 +1983,40 @@ class _MapPageState extends State<MapPage> {
             ),
           ),
           const SizedBox(height: 10),
-          // Toggle Legend
-          FloatingActionButton(
-            onPressed: () {
-              setState(() {
-                _showLegend = !_showLegend;
-              });
-            },
-            heroTag: 'toggleLegend',
-            mini: true,
-            backgroundColor: _showLegend ? Colors.green[700] : Colors.grey[600],
-            tooltip: _showLegend ? 'Hide Legend' : 'Show Legend',
-            child: Icon(_showLegend ? Icons.map : Icons.map_outlined),
-          ),
-          const SizedBox(height: 10),
-          // Toggle Info Panel
-          FloatingActionButton(
-            onPressed: () {
-              setState(() {
-                _showInfoPanel = !_showInfoPanel;
-              });
-            },
-            heroTag: 'toggleInfoPanel',
-            mini: true,
-            backgroundColor: _showInfoPanel
-                ? Colors.green[700]
-                : Colors.grey[600],
-            tooltip: _showInfoPanel ? 'Hide Info Panel' : 'Show Info Panel',
-            child: Icon(_showInfoPanel ? Icons.info : Icons.info_outline),
-          ),
-          const SizedBox(height: 10),
+          // Toggle Legend (i-hide kung scan-only view)
+          if (!_isScanOnlyView)
+            FloatingActionButton(
+              onPressed: () {
+                setState(() {
+                  _showLegend = !_showLegend;
+                });
+              },
+              heroTag: 'toggleLegend',
+              mini: true,
+              backgroundColor: _showLegend
+                  ? Colors.green[700]
+                  : Colors.grey[600],
+              tooltip: _showLegend ? 'Hide Legend' : 'Show Legend',
+              child: Icon(_showLegend ? Icons.map : Icons.map_outlined),
+            ),
+          if (!_isScanOnlyView) const SizedBox(height: 10),
+          // Toggle Info Panel (i-hide kung scan-only view)
+          if (!_isScanOnlyView)
+            FloatingActionButton(
+              onPressed: () {
+                setState(() {
+                  _showInfoPanel = !_showInfoPanel;
+                });
+              },
+              heroTag: 'toggleInfoPanel',
+              mini: true,
+              backgroundColor: _showInfoPanel
+                  ? Colors.green[700]
+                  : Colors.grey[600],
+              tooltip: _showInfoPanel ? 'Hide Info Panel' : 'Show Info Panel',
+              child: Icon(_showInfoPanel ? Icons.info : Icons.info_outline),
+            ),
+          if (!_isScanOnlyView) const SizedBox(height: 10),
           // Fit to Caraga Region
           FloatingActionButton(
             onPressed: _fitMapToCaraga,

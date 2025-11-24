@@ -5,6 +5,7 @@ import 'package:image/image.dart' as img;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
+import 'package:geocoding/geocoding.dart';
 import '../services/ml_service.dart';
 import '../services/user_service.dart';
 import '../services/location_service.dart'; // I-add ni
@@ -43,6 +44,10 @@ class _ScanPageState extends State<ScanPage> {
   bool _nonMangroveResult = false;
   String?
   _lastSelectedSource; // Track which button was last pressed ('camera' or 'gallery')
+  double? _currentLatitude; // Current scan location latitude
+  double? _currentLongitude; // Current scan location longitude
+  String?
+  _currentLocationAddress; // Current location address (barangay/municipality)
 
   static const Color _mintGreen = Color(
     0xFFB9F6CA,
@@ -270,6 +275,10 @@ class _ScanPageState extends State<ScanPage> {
     });
 
     try {
+      // Kuha ang current location (parallel with image processing)
+      debugPrint('📍 Fetching scan location...');
+      final locationFuture = _locationService.getLocationCoordinates();
+
       // I-fix ang orientation ug i-resize to 640x640
       final processedFile = await _fixImageOrientation(imageFile);
 
@@ -327,6 +336,43 @@ class _ScanPageState extends State<ScanPage> {
         _isLoading = false;
       });
 
+      // Kuha ang location result
+      final location = await locationFuture;
+      setState(() {
+        _currentLatitude = location['latitude'];
+        _currentLongitude = location['longitude'];
+      });
+
+      if (_currentLatitude != null && _currentLongitude != null) {
+        debugPrint(
+          '✅ Location captured: $_currentLatitude, $_currentLongitude',
+        );
+
+        // I-convert ang coordinates to barangay/municipality address
+        try {
+          List<Placemark> placemarks = await placemarkFromCoordinates(
+            _currentLatitude!,
+            _currentLongitude!,
+          );
+
+          if (placemarks.isNotEmpty) {
+            final place = placemarks.first;
+            // I-prioritize ang barangay, kung wala locality (municipality)
+            setState(() {
+              _currentLocationAddress =
+                  place.subLocality ??
+                  place.locality ??
+                  '${place.locality}, ${place.administrativeArea}';
+            });
+            debugPrint('📍 Address: $_currentLocationAddress');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Failed to get address: $e');
+        }
+      } else {
+        debugPrint('⚠️ Location not available for this scan');
+      }
+
       // ⭐ Fetch LLM insight asynchronously (dili mag-block sa UI)
       _fetchLLMInsight(bestDetection);
 
@@ -355,6 +401,9 @@ class _ScanPageState extends State<ScanPage> {
       final htmlInsight = await _llmService.getSpeciesInsight(
         speciesName: detection.label,
         confidence: detection.confidence,
+        latitude: _currentLatitude,
+        longitude: _currentLongitude,
+        locationAddress: _currentLocationAddress,
       );
 
       // Update ang detection result with HTML content
@@ -859,6 +908,8 @@ class _ScanPageState extends State<ScanPage> {
                         imagePath: _selectedImage?.path,
                         llmInsightHtml:
                             detection.llmInsightHtml, // Pass LLM insight
+                        latitude: _currentLatitude, // Pass scan location
+                        longitude: _currentLongitude, // Pass scan location
                       ),
                     ),
                   );
