@@ -53,7 +53,7 @@ class _HistoryPageState extends State<HistoryPage>
         });
       }
     } catch (e) {
-      debugPrint('Error sa pag-load sa history: $e');
+      debugPrint('Error loading history: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('May problema sa pag-load sa history: $e')),

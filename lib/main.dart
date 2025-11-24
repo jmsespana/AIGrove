@@ -28,7 +28,7 @@ void main() async {
       '🔑 OPENROUTER_API_KEY: ${dotenv.env['OPENROUTER_API_KEY']?.substring(0, 20)}...',
     );
   } catch (e) {
-    debugPrint('❌ Error sa pag-load sa .env file: $e');
+    debugPrint('❌ Error loading .env file: $e');
   }
 
   await Supabase.initialize(

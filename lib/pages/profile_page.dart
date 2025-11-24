@@ -43,7 +43,7 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sa pag-load sa profile: $e')),
+        SnackBar(content: Text('Error lloading profile: $e')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
