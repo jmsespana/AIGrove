@@ -6,20 +6,21 @@ import 'dart:ui';
 class DetectionResult {
   final String label; // Klase sa object (e.g., "mangrove")
   final double confidence; // Kasigurohan (0.0 to 1.0)
-  final Rect boundingBox; // Location sa image
+  final Rect? boundingBox; // Optional kung detection, null kung classification
   String?
   llmInsightHtml; // LLM-generated HTML insight (nullable, loaded asynchronously)
 
   DetectionResult({
     required this.label,
     required this.confidence,
-    required this.boundingBox,
+    this.boundingBox,
     this.llmInsightHtml,
   });
 
   @override
   String toString() {
-    return 'DetectionResult(label: $label, confidence: ${(confidence * 100).toStringAsFixed(1)}%, box: $boundingBox)';
+    final boxLabel = boundingBox != null ? '$boundingBox' : 'none';
+    return 'DetectionResult(label: $label, confidence: ${(confidence * 100).toStringAsFixed(1)}%, box: $boxLabel)';
   }
 }
 

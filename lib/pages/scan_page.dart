@@ -2,12 +2,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
+import 'package:geocoding/geocoding.dart';
 import '../services/ml_service.dart';
 import '../services/user_service.dart';
 import '../services/location_service.dart'; // I-add ni
 import '../services/llm_service.dart'; // I-add para sa AI insights
 import '../services/chatbot_service.dart'; // I-add para sa image explanation
+import '../services/profile_service.dart';
 import '../models/detection_result.dart';
 import '../widgets/detection_overlay.dart';
 import '../theme/app_theme.dart';
@@ -37,12 +41,42 @@ class _ScanPageState extends State<ScanPage> {
   List<DetectionResult>? _detections;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _nonMangroveResult = false;
   String?
   _lastSelectedSource; // Track which button was last pressed ('camera' or 'gallery')
+  double? _currentLatitude; // Current scan location latitude
+  double? _currentLongitude; // Current scan location longitude
+  String?
+  _currentLocationAddress; // Current location address (barangay/municipality)
+
+  static const Color _mintGreen = Color(
+    0xFFB9F6CA,
+  ); // Mint green para sa loading
+
+  static const List<String> _defaultLabels = [
+    'Avicennia Marina',
+    'Avicennia Officinalis',
+    'Bruguiera Cylindrica',
+    'Bruguiera Gymnorhiza',
+    'Ceriops Tagal',
+    'Excoecaria Agallocha',
+    'Lumnitzera Littorea',
+    'Nypa Fruticans',
+    'Rhizophora Apiculata',
+    'Rhizophora Mucronata',
+    'Rhizophora Stylosa',
+    'Sonneratia Alba',
+    'Sonneratia Caseolaris',
+    'Sonneratia Ovata',
+    'Xylocarpus Granatum',
+  ];
+
+  List<String> _labels = [];
 
   @override
   void initState() {
     super.initState();
+    _labels = List.from(_defaultLabels); // I-load ang default labels
     _initializeModel();
   }
 
@@ -154,8 +188,6 @@ class _ScanPageState extends State<ScanPage> {
   /// I-save ang scan result sa history WITH location
   Future<void> _saveScanToHistory(DetectionResult detection) async {
     try {
-      final userService = context.read<UserService>();
-
       // Kuha ang current location gamit ang LocationService
       debugPrint('🔍 Getting location for scan...');
       final location = await _locationService.getLocationCoordinates();
@@ -171,29 +203,59 @@ class _ScanPageState extends State<ScanPage> {
         );
       }
 
-      // I-save ang scan sa database with location
-      await userService.saveScan(
-        speciesName: detection.label,
-        imageUrl: _selectedImage?.path,
-        latitude: latitude,
-        longitude: longitude,
-        notes: null,
-      );
+      // Kuha sa user service para ma-sync ang datos sa Supabase
+      if (!mounted) return;
+      final userService = context.read<UserService>();
 
-      debugPrint('✅ Scan saved to history: ${detection.label}');
+      if (userService.isAuthenticated) {
+        final capturedAt = DateTime.now().toUtc();
+        final double confToSave = detection.confidence;
 
-      // I-show ang success message with location info
-      if (mounted && latitude != null && longitude != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '✅ Scan saved with location: ${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}',
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
+        await userService.saveScan(
+          speciesName: detection.label,
+          imageUrl: _selectedImage?.path,
+          latitude: latitude,
+          longitude: longitude,
+          capturedAt: capturedAt,
+          confidence: confToSave,
         );
+
+        // I-refresh ang profile stats ug activity
+        if (!mounted) return;
+        final profileService = context.read<ProfileService>();
+        try {
+          await Future.wait([
+            profileService.loadProfileStats(),
+            profileService.loadRecentActivity(limit: 10),
+          ]);
+        } catch (e) {
+          debugPrint('⚠️ Failed to refresh profile stats: $e');
+        }
+
+        debugPrint('✅ Supabase scan stored @ $capturedAt');
+      } else {
+        debugPrint('⚠️ Supabase sync skipped: walay naka-login nga user');
       }
+
+      if (!mounted) return;
+
+      final localTime = DateTime.now();
+      final formattedTime = DateFormat(
+        'MMM d, yyyy • h:mm a',
+      ).format(localTime);
+
+      final locationLabel = (latitude != null && longitude != null)
+          ? 'Location: ${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}'
+          : 'Location data unavailable';
+
+      // Ipakita ang timestamp aron klaro ang oras nga na-save ang scan
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ Scan saved ($formattedTime)\n$locationLabel'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     } catch (e) {
       debugPrint('❌ Error saving scan to history: $e');
       // Dili na nako i-show ang error sa user para dili ma-interrupt ang flow
@@ -209,9 +271,14 @@ class _ScanPageState extends State<ScanPage> {
       _detections = null;
       _errorMessage = null;
       _imageSize = null;
+      _nonMangroveResult = false;
     });
 
     try {
+      // Kuha ang current location (parallel with image processing)
+      debugPrint('📍 Fetching scan location...');
+      final locationFuture = _locationService.getLocationCoordinates();
+
       // I-fix ang orientation ug i-resize to 640x640
       final processedFile = await _fixImageOrientation(imageFile);
 
@@ -269,6 +336,43 @@ class _ScanPageState extends State<ScanPage> {
         _isLoading = false;
       });
 
+      // Kuha ang location result
+      final location = await locationFuture;
+      setState(() {
+        _currentLatitude = location['latitude'];
+        _currentLongitude = location['longitude'];
+      });
+
+      if (_currentLatitude != null && _currentLongitude != null) {
+        debugPrint(
+          '✅ Location captured: $_currentLatitude, $_currentLongitude',
+        );
+
+        // I-convert ang coordinates to barangay/municipality address
+        try {
+          List<Placemark> placemarks = await placemarkFromCoordinates(
+            _currentLatitude!,
+            _currentLongitude!,
+          );
+
+          if (placemarks.isNotEmpty) {
+            final place = placemarks.first;
+            // I-prioritize ang barangay, kung wala locality (municipality)
+            setState(() {
+              _currentLocationAddress =
+                  place.subLocality ??
+                  place.locality ??
+                  '${place.locality}, ${place.administrativeArea}';
+            });
+            debugPrint('📍 Address: $_currentLocationAddress');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Failed to get address: $e');
+        }
+      } else {
+        debugPrint('⚠️ Location not available for this scan');
+      }
+
       // ⭐ Fetch LLM insight asynchronously (dili mag-block sa UI)
       _fetchLLMInsight(bestDetection);
 
@@ -297,6 +401,9 @@ class _ScanPageState extends State<ScanPage> {
       final htmlInsight = await _llmService.getSpeciesInsight(
         speciesName: detection.label,
         confidence: detection.confidence,
+        latitude: _currentLatitude,
+        longitude: _currentLongitude,
+        locationAddress: _currentLocationAddress,
       );
 
       // Update ang detection result with HTML content
@@ -446,6 +553,22 @@ class _ScanPageState extends State<ScanPage> {
     );
   }
 
+  void _showNonMangroveInfo(String? assistantMessage) {
+    // Inform ang user nga walay match ang model sa mangrove species
+    final String message =
+        (assistantMessage != null && assistantMessage.trim().isNotEmpty)
+        ? assistantMessage.trim()
+        : 'No mangrove detected. This likely is not a mangrove.';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.orange[700],
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _mlService.dispose();
@@ -475,11 +598,12 @@ class _ScanPageState extends State<ScanPage> {
                 ),
               ),
 
-              // Results area - Show loading card or results card
-              if (_isLoading && _selectedImage != null)
-                _buildLoadingResultsCard()
-              else if (_detections != null && _detections!.isNotEmpty)
+              // Results area - Show detection card kung naay resulta
+              if (_detections != null && _detections!.isNotEmpty) ...[
                 _buildResultsCard(),
+              ] else if (_nonMangroveResult) ...[
+                _buildNonMangroveCard(),
+              ],
 
               // Action buttons
               _buildActionButtons(),
@@ -784,6 +908,8 @@ class _ScanPageState extends State<ScanPage> {
                         imagePath: _selectedImage?.path,
                         llmInsightHtml:
                             detection.llmInsightHtml, // Pass LLM insight
+                        latitude: _currentLatitude, // Pass scan location
+                        longitude: _currentLongitude, // Pass scan location
                       ),
                     ),
                   );
@@ -824,9 +950,10 @@ class _ScanPageState extends State<ScanPage> {
     return Icons.error_outline;
   }
 
-  Widget _buildLoadingResultsCard() {
+  Widget _buildNonMangroveCard() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final cardColor = isDarkMode ? Colors.grey[850]! : Colors.white;
+    final textColor = isDarkMode ? Colors.white : Colors.grey[900]!;
     final subtextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[600]!;
 
     return Container(
@@ -846,22 +973,20 @@ class _ScanPageState extends State<ScanPage> {
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.green[700],
+                    color: Colors.orange[700],
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 3,
-                    ),
+                  child: const Icon(
+                    Icons.info_outline,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -870,7 +995,7 @@ class _ScanPageState extends State<ScanPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Analyzing...',
+                        'Inference Result',
                         style: TextStyle(
                           fontSize: 12,
                           color: subtextColor,
@@ -880,11 +1005,11 @@ class _ScanPageState extends State<ScanPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Identifying species',
+                        'Not a mangrove',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.green[700],
+                          color: textColor,
                         ),
                       ),
                     ],
@@ -893,38 +1018,71 @@ class _ScanPageState extends State<ScanPage> {
               ],
             ),
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.green[900] : Colors.green[50],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      color: Colors.green[700],
-                      strokeWidth: 2,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Processing image...',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: subtextColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+            Text(
+              'No class matched the model output. Try another angle or take a clearer photo.',
+              style: TextStyle(fontSize: 14, color: subtextColor, height: 1.5),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProcessingIcon({double iconSize = 64}) {
+    // Gamit og spinner nga klaro kaayo nga nag-process
+    return SizedBox(
+      width: iconSize,
+      height: iconSize,
+      child: CircularProgressIndicator(
+        strokeWidth: 6,
+        valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
+        // ignore: deprecated_member_use
+        backgroundColor: Colors.white.withOpacity(0.4),
+      ),
+    );
+  }
+
+  Widget _buildProcessingStatus() {
+    // Pakita og klarong status text samtang nag-scan
+    const Color accent = Colors.black;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildProcessingIcon(),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.travel_explore_rounded, color: accent, size: 20),
+            const SizedBox(width: 6),
+            Text(
+              'Searching mangroves...',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: accent,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'Please wait while analyzing the image.',
+                // ignore: deprecated_member_use
+                style: TextStyle(fontSize: 13, color: accent.withOpacity(0.8)),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

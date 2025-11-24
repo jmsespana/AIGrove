@@ -204,171 +204,9 @@ Practical tip: Keep buffer zones and avoid removing mangroves near vulnerable co
                       ),
                     ),
 
-                  // Province Statistics Section
-                  const Text(
-                    'Provincial Statistics',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  GridView.count(
-                     shrinkWrap: true,
-                     physics: const NeverScrollableScrollPhysics(),
-                     crossAxisCount: 2,
-                     mainAxisSpacing: 16,
-                     crossAxisSpacing: 16,
-                     childAspectRatio: 0.85,
-                     // remove 'const' so runtime map/list literals (speciesDetails) are allowed
-                     children: [
-                       ProvinceCard(
-                         province: 'Agusan del Norte',
-                         treeCount: 5,
-                         color: Color.fromARGB(255, 191, 160, 5),
-                         speciesByYear: {'2021': 5},
-                         speciesDetails: {
-                           '2021': [
-                             'Avicennia officinalis',
-                             'Ceriops tagal',
-                             'Rhizophora mucronata',
-                             'Sonneratia alba',
-                             'Sonneratia caseolaris',
-                           ],
-                         },
-                       ),
-                       ProvinceCard(
-                         province: 'Surigao del Sur',
-                         treeCount: 28, // Updated: 13 (2021) + 15 (2022) = 28 total reports
-                         color: Color.fromARGB(255, 126, 202, 130),
-                         speciesByYear: {'2021': 13, '2022': 15}, // Updated counts based sa actual species
-                         speciesDetails: {
-                           '2021': [
-                             'Acrostichum aureum',
-                             'Aegiceras floridum',
-                             'Avicennia marina',
-                             'Brownlowia tersa',
-                             'Bruguiera gymnorrhiza',
-                             'Heritiera littoralis',
-                             'Lumnitzera littorea',
-                             'Nypa fruticans',
-                             'Rhizophora apiculata',
-                             'Rhizophora mucronata',
-                             'Sonneratia alba',
-                             'Sonneratia ovata',
-                             'Xylocarpus granatum',
-                           ],
-                           '2022': [
-                             'Aegiceras corniculatum',
-                             'Avicennia alba',
-                             'Avicennia marina',
-                             'Brownlowia tersa',
-                             'Bruguiera gymnorrhiza',
-                             'Bruguiera sp.',
-                             'Camptostemon philippinense',
-                             'Ceriops tagal',
-                             'Dolichandrone spathacea',
-                             'Heritiera littoralis',
-                             'Rhizophora apiculata',
-                             'Rhizophora mucronata',
-                             'Sonneratia alba',
-                             'Sonneratia ovata',
-                             'Xylocarpus granatum',
-                           ],
-                         },
-                       ),
-                       ProvinceCard(
-                         province: 'Surigao del Norte',
-                         // Updated: 2020 (15 species) + 2021 (8 species) + 2022 (23 species) = 46 total reports
-                         treeCount: 46,
-                         color: Color.fromARGB(255, 40, 167, 33),
-                         speciesByYear: {
-                           '2020': 15,
-                           '2021': 8,
-                           '2022': 23,
-                         },
-                         speciesDetails: {
-                           '2020': [
-                             'Acanthus ilicifolius',
-                             'Acanthus volubilis',
-                             'Avicennia marina',
-                             'Avicennia officinalis',
-                             'Bruguiera gymnorrhiza',
-                             'Bruguiera sexangula',
-                             'Ceriops decandra',
-                             'Ceriops tagal',
-                             'Nypa fruticans',
-                             'Rhizophora apiculata',
-                             'Rhizophora mucronata',
-                             'Rhizophora stylosa',
-                             'Scyphiphora hydrophyllacea',
-                             'Sonneratia alba',
-                             'Xylocarpus granatum',
-                           ],
-                           '2021': [
-                             'Avicennia marina',
-                             'Avicennia officinalis',
-                             'Nypa fruticans',
-                             'Rhizophora apiculata',
-                             'Rhizophora mucronata',
-                             'Rhizophora stylosa',
-                             'Sonneratia alba',
-                             'Xylocarpus granatum',
-                           ],
-                           '2022': [
-                             'Aegiceras corniculatum',
-                             'Avicennia alba',
-                             'Avicennia marina',
-                             'Avicennia officinalis',
-                             'Avicennia rumphiana',
-                             'Brownlowia tersa',
-                             'Bruguiera cylindrica',
-                             'Bruguiera gymnorrhiza',
-                             'Bruguiera sexangula',
-                             'Ceriops tagal',
-                             'Ceriops zippeliana',
-                             'Heritiera littoralis',
-                             'Lumnitzera littorea',
-                             'Lumnitzera racemosa',
-                             'Nypa fruticans',
-                             'Rhizophora apiculata',
-                             'Rhizophora mucronata',
-                             'Rhizophora stylosa',
-                             'Scyphiphora hydrophyllacea',
-                             'Sonneratia alba',
-                             'Sonneratia ovata',
-                             'Xylocarpus granatum',
-                             'Xylocarpus moluccensis',
-                           ],
-                         },
-                       ),
-                       ProvinceCard(
-                         province: 'Dinagat Islands',
-                         treeCount: 14, // Updated: total unique species sa 2021
-                         color: Color.fromARGB(255, 52, 152, 219),
-                         speciesByYear: {'2021': 14}, // Updated: 14 species identified
-                         speciesDetails: {
-                           '2021': [
-                             'Avicennia officinalis',
-                             'Avicennia rumphiana',
-                             'Bruguiera sexangula',
-                             'Ceriops tagal',
-                             'Lumnitzera littorea',
-                             'Nypa fruticans',
-                             'Pemphis acidula',
-                             'Rhizophora apiculata',
-                             'Rhizophora lamarckii',
-                             'Rhizophora mucronata',
-                             'Rhizophora stylosa',
-                             'Sonneratia alba',
-                             'Sonneratia caseolaris',
-                             'Xylocarpus granatum',
-                           ],
-                         },
-                       ),
-                     ],
-                   ),
-
-                  const SizedBox(height: 32),
-
                     // Province Statistics Section
+                    const SizedBox(height: 28),
+
                     const Text(
                       'Provincial Statistics',
                       style: TextStyle(
@@ -403,23 +241,40 @@ Practical tip: Keep buffer zones and avoid removing mangroves near vulnerable co
                         ),
                         ProvinceCard(
                           province: 'Surigao del Sur',
-                          treeCount: 15,
+                          treeCount:
+                              28, // Updated: 13 (2021) + 15 (2022) = 28 total reports
                           color: Color.fromARGB(255, 126, 202, 130),
-                          speciesByYear: {'2022': 8, '2021': 7},
+                          speciesByYear: {
+                            '2021': 13,
+                            '2022': 15,
+                          }, // Updated counts based sa actual species
                           speciesDetails: {
                             '2021': [
-                              'Bruguiera gymnorhiza',
+                              'Acrostichum aureum',
+                              'Aegiceras floridum',
+                              'Avicennia marina',
+                              'Brownlowia tersa',
+                              'Bruguiera gymnorrhiza',
+                              'Heritiera littoralis',
                               'Lumnitzera littorea',
                               'Nypa fruticans',
                               'Rhizophora apiculata',
                               'Rhizophora mucronata',
                               'Sonneratia alba',
+                              'Sonneratia ovata',
                               'Xylocarpus granatum',
                             ],
                             '2022': [
+                              'Aegiceras corniculatum',
+                              'Avicennia alba',
                               'Avicennia marina',
-                              'Bruguiera gymnorhiza',
+                              'Brownlowia tersa',
+                              'Bruguiera gymnorrhiza',
+                              'Bruguiera sp.',
+                              'Camptostemon philippinense',
                               'Ceriops tagal',
+                              'Dolichandrone spathacea',
+                              'Heritiera littoralis',
                               'Rhizophora apiculata',
                               'Rhizophora mucronata',
                               'Sonneratia alba',
@@ -430,70 +285,84 @@ Practical tip: Keep buffer zones and avoid removing mangroves near vulnerable co
                         ),
                         ProvinceCard(
                           province: 'Surigao del Norte',
-                          // total reports = sum of species counts per year (13+13+13)
-                          treeCount: 39,
+                          // Updated: 2020 (15 species) + 2021 (8 species) + 2022 (23 species) = 46 total reports
+                          treeCount: 46,
                           color: Color.fromARGB(255, 40, 167, 33),
-                          speciesByYear: {'2022': 13, '2021': 13, '2020': 13},
+                          speciesByYear: {'2020': 15, '2021': 8, '2022': 23},
                           speciesDetails: {
                             '2020': [
+                              'Acanthus ilicifolius',
+                              'Acanthus volubilis',
                               'Avicennia marina',
                               'Avicennia officinalis',
-                              'Bruguiera cylindrica',
-                              'Bruguiera gymnorhiza',
+                              'Bruguiera gymnorrhiza',
+                              'Bruguiera sexangula',
+                              'Ceriops decandra',
                               'Ceriops tagal',
-                              'Excoecaria agallocha',
-                              'Lumnitzera littorea',
                               'Nypa fruticans',
                               'Rhizophora apiculata',
                               'Rhizophora mucronata',
                               'Rhizophora stylosa',
+                              'Scyphiphora hydrophyllacea',
                               'Sonneratia alba',
                               'Xylocarpus granatum',
                             ],
                             '2021': [
                               'Avicennia marina',
                               'Avicennia officinalis',
-                              'Bruguiera cylindrica',
-                              'Bruguiera gymnorhiza',
-                              'Ceriops tagal',
-                              'Lumnitzera littorea',
                               'Nypa fruticans',
                               'Rhizophora apiculata',
                               'Rhizophora mucronata',
                               'Rhizophora stylosa',
                               'Sonneratia alba',
-                              'Sonneratia ovata',
                               'Xylocarpus granatum',
                             ],
                             '2022': [
+                              'Aegiceras corniculatum',
+                              'Avicennia alba',
                               'Avicennia marina',
                               'Avicennia officinalis',
+                              'Avicennia rumphiana',
+                              'Brownlowia tersa',
                               'Bruguiera cylindrica',
-                              'Bruguiera gymnorhiza',
+                              'Bruguiera gymnorrhiza',
+                              'Bruguiera sexangula',
                               'Ceriops tagal',
+                              'Ceriops zippeliana',
+                              'Heritiera littoralis',
                               'Lumnitzera littorea',
+                              'Lumnitzera racemosa',
                               'Nypa fruticans',
                               'Rhizophora apiculata',
                               'Rhizophora mucronata',
                               'Rhizophora stylosa',
+                              'Scyphiphora hydrophyllacea',
                               'Sonneratia alba',
                               'Sonneratia ovata',
                               'Xylocarpus granatum',
+                              'Xylocarpus moluccensis',
                             ],
                           },
                         ),
                         ProvinceCard(
                           province: 'Dinagat Islands',
-                          treeCount: 10,
+                          treeCount:
+                              14, // Updated: total unique species sa 2021
                           color: Color.fromARGB(255, 52, 152, 219),
-                          speciesByYear: {'2021': 10},
+                          speciesByYear: {
+                            '2021': 14,
+                          }, // Updated: 14 species identified
                           speciesDetails: {
                             '2021': [
                               'Avicennia officinalis',
+                              'Avicennia rumphiana',
+                              'Bruguiera sexangula',
                               'Ceriops tagal',
                               'Lumnitzera littorea',
                               'Nypa fruticans',
+                              'Pemphis acidula',
                               'Rhizophora apiculata',
+                              'Rhizophora lamarckii',
                               'Rhizophora mucronata',
                               'Rhizophora stylosa',
                               'Sonneratia alba',
@@ -604,7 +473,7 @@ Practical tip: Keep buffer zones and avoid removing mangroves near vulnerable co
           backgroundColor: Colors.green.shade700,
           icon: const Icon(Icons.chat_bubble, color: Colors.white),
           label: const Text(
-            'AI Chat',
+            'AI-assistant',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           elevation: 6,
@@ -674,7 +543,7 @@ Practical tip: Keep buffer zones and avoid removing mangroves near vulnerable co
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Powered by Gemini AI',
+                          'Powered by Meta Llama AI',
                           style: TextStyle(
                             color: Colors.white.withAlpha(_alpha(0.9)),
                             fontSize: 12,
@@ -1420,8 +1289,8 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
 
   @override
   Widget build(BuildContext context) {
-    // Real data gikan sa imong ProvinceCard
-    const years = ['2017', '2018', '2019', '2020', '2021', '2022', '2023'];
+    // Real data gikan sa imong ProvinceCard - UPDATED based on actual data
+    const years = ['2020', '2021', '2022'];
 
     // Colors matching ProvinceCard - consistent sa whole app
     const cAgusan = Color.fromARGB(255, 191, 160, 5);
@@ -1453,14 +1322,14 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                 horizontalInterval: 5,
                 verticalInterval: 1,
                 getDrawingHorizontalLine: (value) => FlLine(
-                  color: Colors.green.shade200.withAlpha(_alpha(0.4)),
-                  strokeWidth: 1,
-                  dashArray: [5, 5],
+                  color: Colors.green.shade100.withAlpha(_alpha(0.6)),
+                  strokeWidth: 1.5,
+                  dashArray: [8, 4],
                 ),
                 getDrawingVerticalLine: (value) => FlLine(
-                  color: Colors.green.shade200.withAlpha(_alpha(0.4)),
-                  strokeWidth: 1,
-                  dashArray: [5, 5],
+                  color: Colors.green.shade100.withAlpha(_alpha(0.6)),
+                  strokeWidth: 1.5,
+                  dashArray: [8, 4],
                 ),
               ),
               titlesData: FlTitlesData(
@@ -1531,41 +1400,43 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
               borderData: FlBorderData(
                 show: true,
                 border: Border(
-                  left: BorderSide(color: Colors.green.shade300, width: 2),
-                  bottom: BorderSide(color: Colors.green.shade300, width: 2),
+                  left: BorderSide(color: Colors.green.shade400, width: 2.5),
+                  bottom: BorderSide(color: Colors.green.shade400, width: 2.5),
                   right: BorderSide.none,
                   top: BorderSide.none,
                 ),
               ),
               minX: 0,
-              maxX: 6, // 0-6 para sa 7 years (2017-2023)
+              maxX: 2, // 0-2 para sa 3 years (2020-2022)
               minY: 0,
-              maxY: 30, // Max value based sa actual data
+              maxY: 25, // Max 23 species (Surigao del Norte 2022)
               lineBarsData: [
-                // Surigao del Norte - Complete data (2019-2023)
+                // Surigao del Norte - 2020: 15, 2021: 8, 2022: 23
                 LineChartBarData(
                   spots: const [
-                    FlSpot(2, 20), // 2019: 20 species
-                    FlSpot(3, 17), // 2020: 17 species
-                    FlSpot(4, 22), // 2021: 22 species
-                    FlSpot(5, 29), // 2022: 29 species
-                    FlSpot(6, 1), // 2023: 1 species
+                    FlSpot(0, 15), // 2020: 15 species
+                    FlSpot(1, 8), // 2021: 8 species
+                    FlSpot(2, 23), // 2022: 23 species
                   ],
                   isCurved: true,
-                  curveSmoothness: 0.35,
+                  curveSmoothness: 0.4,
                   gradient: LinearGradient(
-                    colors: [cSurigaoN, cSurigaoN.withAlpha(_alpha(0.8))],
+                    colors: [
+                      cSurigaoN,
+                      const Color.fromARGB(255, 60, 200, 53),
+                      cSurigaoN.withAlpha(_alpha(0.85)),
+                    ],
                   ),
-                  barWidth: 3,
+                  barWidth: 4.5,
                   isStrokeCapRound: true,
                   dotData: FlDotData(
                     show: true,
                     getDotPainter: (spot, percent, barData, index) =>
                         FlDotCirclePainter(
-                          radius: 5,
+                          radius: 7,
                           color: Colors.white,
                           strokeColor: cSurigaoN,
-                          strokeWidth: 2.5,
+                          strokeWidth: 3.5,
                         ),
                   ),
                   belowBarData: BarAreaData(
@@ -1574,36 +1445,45 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        cSurigaoN.withAlpha(_alpha(0.4)),
-                        cSurigaoN.withAlpha(_alpha(0.1)),
+                        cSurigaoN.withAlpha(_alpha(0.5)),
+                        cSurigaoN.withAlpha(_alpha(0.25)),
+                        cSurigaoN.withAlpha(_alpha(0.08)),
                         Colors.transparent,
                       ],
                     ),
                   ),
+                  shadow: Shadow(
+                    color: cSurigaoN.withAlpha(_alpha(0.4)),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
                 ),
 
-                // Surigao del Sur - Growing trend (2017, 2021, 2022)
+                // Surigao del Sur - 2021: 13, 2022: 15
                 LineChartBarData(
                   spots: const [
-                    FlSpot(0, 9), // 2017: 9 species
-                    FlSpot(4, 13), // 2021: 13 species
-                    FlSpot(5, 15), // 2022: 15 species
+                    FlSpot(1, 13), // 2021: 13 species
+                    FlSpot(2, 15), // 2022: 15 species
                   ],
                   isCurved: true,
-                  curveSmoothness: 0.35,
+                  curveSmoothness: 0.4,
                   gradient: LinearGradient(
-                    colors: [cSurigaoS, cSurigaoS.withAlpha(_alpha(0.8))],
+                    colors: [
+                      cSurigaoS,
+                      const Color.fromARGB(255, 146, 220, 150),
+                      cSurigaoS.withAlpha(_alpha(0.85)),
+                    ],
                   ),
-                  barWidth: 3,
+                  barWidth: 4.5,
                   isStrokeCapRound: true,
                   dotData: FlDotData(
                     show: true,
                     getDotPainter: (spot, percent, barData, index) =>
                         FlDotCirclePainter(
-                          radius: 5,
+                          radius: 7,
                           color: Colors.white,
                           strokeColor: cSurigaoS,
-                          strokeWidth: 2.5,
+                          strokeWidth: 3.5,
                         ),
                   ),
                   belowBarData: BarAreaData(
@@ -1612,53 +1492,101 @@ class _MangroveSpeciesChartState extends State<MangroveSpeciesChart> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        cSurigaoS.withAlpha(_alpha(0.4)),
-                        cSurigaoS.withAlpha(_alpha(0.1)),
+                        cSurigaoS.withAlpha(_alpha(0.5)),
+                        cSurigaoS.withAlpha(_alpha(0.25)),
+                        cSurigaoS.withAlpha(_alpha(0.08)),
                         Colors.transparent,
                       ],
                     ),
                   ),
+                  shadow: Shadow(
+                    color: cSurigaoS.withAlpha(_alpha(0.4)),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
                 ),
 
-                // Dinagat Islands - Single data point (2021)
+                // Dinagat Islands - 2021: 14 species only
                 LineChartBarData(
                   spots: const [
-                    FlSpot(4, 14), // 2021: 14 species
+                    FlSpot(1, 14), // 2021: 14 species
                   ],
                   gradient: LinearGradient(
-                    colors: [cDinagat, cDinagat.withAlpha(_alpha(0.8))],
+                    colors: [
+                      cDinagat,
+                      const Color.fromARGB(255, 92, 172, 239),
+                      cDinagat.withAlpha(_alpha(0.85)),
+                    ],
                   ),
-                  barWidth: 3,
+                  barWidth: 4.5,
                   dotData: FlDotData(
                     show: true,
                     getDotPainter: (spot, percent, barData, index) =>
                         FlDotCirclePainter(
-                          radius: 7, // Mas dako para mas visible
+                          radius: 8,
                           color: Colors.white,
                           strokeColor: cDinagat,
-                          strokeWidth: 3,
+                          strokeWidth: 4,
                         ),
+                  ),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        cDinagat.withAlpha(_alpha(0.45)),
+                        cDinagat.withAlpha(_alpha(0.2)),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                  shadow: Shadow(
+                    color: cDinagat.withAlpha(_alpha(0.4)),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ),
 
-                // Agusan del Norte - Single data point (2021)
+                // Agusan del Norte - 2021: 5 species only
                 LineChartBarData(
                   spots: const [
-                    FlSpot(4, 5), // 2021: 5 species
+                    FlSpot(1, 5), // 2021: 5 species
                   ],
                   gradient: LinearGradient(
-                    colors: [cAgusan, cAgusan.withAlpha(_alpha(0.8))],
+                    colors: [
+                      cAgusan,
+                      const Color.fromARGB(255, 211, 180, 25),
+                      cAgusan.withAlpha(_alpha(0.85)),
+                    ],
                   ),
-                  barWidth: 3,
+                  barWidth: 4.5,
                   dotData: FlDotData(
                     show: true,
                     getDotPainter: (spot, percent, barData, index) =>
                         FlDotCirclePainter(
-                          radius: 7, // Mas dako para mas visible
+                          radius: 8,
                           color: Colors.white,
                           strokeColor: cAgusan,
-                          strokeWidth: 3,
+                          strokeWidth: 4,
                         ),
+                  ),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        cAgusan.withAlpha(_alpha(0.45)),
+                        cAgusan.withAlpha(_alpha(0.2)),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                  shadow: Shadow(
+                    color: cAgusan.withAlpha(_alpha(0.4)),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ),
               ],

@@ -277,7 +277,7 @@ class UserService extends ChangeNotifier {
     String? imageUrl,
     double? latitude,
     double? longitude,
-    String? notes,
+    String? notes, required DateTime capturedAt, required double confidence,
   }) async {
     try {
       final user = _supabase.auth.currentUser;

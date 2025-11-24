@@ -22,7 +22,7 @@ void main() async {
 
   // ADD THIS LINE - Load environment variables
   try {
-    await dotenv.load(fileName: ".env");
+    await dotenv.load(fileName: "assets/.env");
     debugPrint('✅ .env file na-load na');
     debugPrint(
       '🔑 OPENROUTER_API_KEY: ${dotenv.env['OPENROUTER_API_KEY']?.substring(0, 20)}...',

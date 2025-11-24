@@ -59,9 +59,9 @@ flutter:
     - assets/images/james_espana.jpeg
     - assets/images/rovannah_delola.jpg
     - assets/images/logo.png
-    - assets/models/last_float32.tflite
+    - assets/models/best_float32.tflite
     - assets/models/labels.txt
-    - .env
+    - assets/.env
 
   # fonts:
   #   - family: Schyler
