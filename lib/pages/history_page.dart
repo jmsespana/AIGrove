@@ -794,7 +794,7 @@ class _HistoryPageState extends State<HistoryPage>
                       ),
                     ),
                     Text(
-                      '$score/$totalQuestions',
+                      '${percentage}/100',
                       style: TextStyle(
                         color: scoreColor,
                         fontWeight: FontWeight.w500,
