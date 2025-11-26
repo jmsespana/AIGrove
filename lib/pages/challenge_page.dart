@@ -1690,9 +1690,9 @@ class QuizResultScreen extends StatelessWidget {
                             color: category.color,
                           ),
                           const SizedBox(height: 16),
-                          // FIXED: Show correct answers out of total questions
+                          // FIXED: Show score as percentage out of 100
                           Text(
-                            '$correctAnswers / $totalQuestions',
+                            '${percentage.toStringAsFixed(0)} / 100',
                             style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
